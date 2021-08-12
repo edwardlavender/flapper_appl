@@ -1,0 +1,40 @@
+---
+title: Applications of the `flapper` family of algorithms
+author: Edward Lavender^1,2\*^
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+^1^ Scottish Oceans Institute, University of St Andrews, University of St Andrews, Scotland  
+^2^ Centre for Research into Ecological and Environmental Modelling University of St Andrews, Scotland
+
+^\*^ This repository is maintained by Edward Lavender (el72@st-andrews.ac.uk).
+
+[![Project Status: Active – The project has reached a stable, usable
+state and is being actively
+developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+
+## Introduction
+
+## Structure
+
+1. `data` contains data for the project. 
+
+2. `R` contains R scropts for data processing, simulation and analysis. 
+
+## Workflow 
+
+## Github packages
+
+## Citation
+
+Lavender et al. (in prep). A new family of algorithms for inferring movement paths and patterns of space use from discrete detections in acoustic arrays. 
+
