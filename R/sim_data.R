@@ -21,7 +21,7 @@ rm(list = ls())
 library(flapper)
 
 #### Global parameters
-seed <- 20210823
+seed <- 20210828
 
 
 
@@ -32,17 +32,20 @@ seed <- 20210823
 ######################################
 #### Define area
 
-#### Define area
-# Define spatial layers and zoom in:
-gebco <- dat_gebco
+#### Define general area
 coast <- dat_coast
-ext <- update_extent(gebco, -400)
-gebco <- raster::crop(gebco, ext)
+ext   <- update_extent(raster::extent(coast), -1250)
 coast <- raster::crop(coast, ext)
-# For simulation, we will focus on an area away from the coast, to avoid NAs in the bathymetry data
-sea <- invert_poly(rgeos::gBuffer(coast, width = 500))
-sea <- raster::crop(sea, ext)
-land <- invert_poly(sea)
+sea   <- invert_poly(coast)
+raster::plot(coast)
+coast_buf <- rgeos::gBuffer(coast, width = 500)
+sea_buf <- invert_poly(coast_buf)
+raster::lines(sea_buf)
+
+#### Define study area grid
+# It is essential that this grid is used for simulation and modelling
+blank <- raster::raster(raster::extent(dat_gebco), res = c(75, 75))
+grid <- raster::resample(dat_gebco, blank)
 
 #### Define study duration
 # We will keep this as small as possible for simulation speed.
@@ -60,43 +63,49 @@ simulate_array <- FALSE
 if(simulate_array){
    #### Array 1
    dat_sim_array_1 <- sim_array(boundaries = ext,
-                                coastline = land,
+                                coastline = coast_buf,
                                 n_receivers = n_receivers[1],
                                 arrangement = "regular",
                                 add_sea = list(),
                                 seed = seed
    )
+   dat_sim_array_1$array$xy <- raster::xyFromCell(grid, raster::cellFromXY(sp::coordinates(dat_sim_array_1$array$xy)))
+   raster::plot(coast)
+   points(dat_sim_array_1$array$xy, col = "red")
    # receivers are ~ 1000 km from each other
    saveRDS(dat_sim_array_1, "./data/algorithms/sim/data/dat_sim_array_1.rds")
 
    #### Array 2
    dat_sim_array_2 <- sim_array(boundaries = ext,
-                                coastline = coast,
+                                coastline = coast_buf,
                                 n_receivers = n_receivers[1],
                                 arrangement = "random",
                                 seed = seed,
                                 add_sea = list()
    )
+   dat_sim_array_2$array$xy <- raster::xyFromCell(grid, raster::cellFromXY(sp::coordinates(dat_sim_array_2$array$xy)))
    saveRDS(dat_sim_array_2, "./data/algorithms/sim/data/dat_sim_array_2.rds")
 
    #### Array 3
    dat_sim_array_3 <- sim_array(boundaries = ext,
-                                coastline = coast,
+                                coastline = coast_buf,
                                 n_receivers = n_receivers[2],
                                 arrangement = "regular",
                                 seed = seed,
                                 add_sea = list()
    )
+   dat_sim_array_3$array$xy <- raster::xyFromCell(grid, raster::cellFromXY(sp::coordinates(dat_sim_array_3$array$xy)))
    saveRDS(dat_sim_array_3, "./data/algorithms/sim/data/dat_sim_array_3.rds")
 
    #### Array 4
    dat_sim_array_4 <- sim_array(boundaries = ext,
-                                coastline = coast,
+                                coastline = coast_buf,
                                 n_receivers = n_receivers[2],
                                 arrangement = "random",
                                 seed = seed,
                                 add_sea = list()
    )
+   dat_sim_array_4$array$xy <- raster::xyFromCell(grid, raster::cellFromXY(sp::coordinates(dat_sim_array_4$array$xy)))
    saveRDS(dat_sim_array_4, "./data/algorithms/sim/data/dat_sim_array_4.rds")
 
    #### List array designs
@@ -135,6 +144,22 @@ dat_sim_moorings_4 = dat_sim_moorings_list[[4]]
 ######################################
 #### Simulate movement
 
+#### Define movement probability given distance and use this to simulate step lengths
+# We will implement this approach so that the simulated/modelled step lengths are based on the same model
+calc_mpr <- function(distance,...) {
+   pr <- stats::plogis(10 + distance * -0.06)
+   pr[distance > 250] <- 0
+   return(pr)
+}
+plot(1:500, calc_mpr(1:500))
+steps <- data.frame(distance = seq(0, 250, length.out = 1e4))
+steps$pr <- calc_mpr(steps$distance)
+sim_step_every_2_mins <- function(...,data = steps, size = 1) {
+   sample(x = data$distance, size = size, prob = data$pr)
+}
+# prettyGraphics::pretty_hist(replicate(1e4, sim_step_every_2_mins()), xlim = c(0, 250), n = 100)
+prettyGraphics::pretty_hist(sim_step_every_2_mins(size = 1e3))
+
 simulate_movement <- FALSE
 if(simulate_movement){
 
@@ -144,32 +169,16 @@ if(simulate_movement){
    # sim_step_every_2_mins <- function(...) stats::rexp(1, rate = 0.01)
    # sim_step_every_2_mins <- function(...) stats::rweibull(1, shape = 100, scale = 100)
 
-   #### Define movement probability given distance and use this to simulate step lengths
-   # We will implement this approach so that the simulated/modelled step lengths are based on the same model
-   calc_mpr <- function(distance,...) {
-      pr <- stats::plogis(10 + distance * -0.06)
-      pr[distance > 250] <- 0
-      return(pr)
-   }
-   plot(1:500, calc_mpr(1:500))
-   steps <- data.frame(distance = seq(0, 250, length.out = 1e4))
-   steps$pr <- calc_mpr(steps$distance)
-   sim_step_every_2_mins <- function(...,data = steps, size = 1) {
-      sample(x = data$distance, size = size, prob = data$pr)
-   }
-   # prettyGraphics::pretty_hist(replicate(1e4, sim_step_every_2_mins()), xlim = c(0, 250), n = 100)
-   prettyGraphics::pretty_hist(sim_step_every_2_mins(size = 1e3))
-
    #### Simulate starting location
    set.seed(seed)
-   p_1 <- sp::coordinates(sp::spsample(sea, n = 1, type = "random"))
-   raster::plot(sea)
+   p_1 <- sp::coordinates(sp::spsample(sea_buf, n = 1, type = "random"))
+   raster::plot(sea_buf)
    points(p_1, col = "red")
 
    #### Simulate movement in area
    dat_sim_path <- sim_path_sa(n = length(study_period),
                                p_1 = p_1,
-                               area = sea,
+                               area = sea_buf,
                                sim_step = sim_step_every_2_mins,
                                seed = seed)
    raster::lines(coast, col = "darkgreen")
@@ -179,7 +188,26 @@ if(simulate_movement){
    dat_sim_path <- readRDS("./data/algorithms/sim/data/dat_sim_paths.rds")
 }
 
+#### Re-express sampled locations on the grid
+# Because of the low resolution of the grid, there is a mismatch.
+dat_sim_path$xy_mat_on_grid <- raster::xyFromCell(grid, raster::cellFromXY(grid, dat_sim_path$xy_mat))
 
+#### Check distances along the simulated path
+## Original path
+utils.add::basic_stats(
+   raster::pointDistance(
+      dat_sim_path$xy_mat[1:(nrow(dat_sim_path$xy_mat)- 1), ],
+      dat_sim_path$xy_mat[2:nrow(dat_sim_path$xy_mat), ],
+      lonlat = FALSE)
+   )
+## Path re-expressed on grid
+dat_sim_path$dist_on_grid <-   rep(NA, nrow(dat_sim_path$xy_mat_on_grid))
+dat_sim_path$dist_on_grid[2:length(dat_sim_path$dist_on_grid)] <-
+   raster::pointDistance(
+      dat_sim_path$xy_mat_on_grid[1:(nrow(dat_sim_path$xy_mat_on_grid)- 1), ],
+      dat_sim_path$xy_mat_on_grid[2:nrow(dat_sim_path$xy_mat_on_grid), ],
+      lonlat = FALSE)
+utils.add::basic_stats(dat_sim_path$dist_on_grid, na.rm = TRUE)
 
 
 ######################################
@@ -197,9 +225,9 @@ simulate_detections <- FALSE
 if(simulate_detections){
    dat_sim_detections_by_array <-
       pbapply::pblapply(dat_sim_array_list, function(array){
-         ## Simulate detections at receivers
-         dat_sim_detections <- sim_detections(path = dat_sim_path$xy_mat,
-                                              xy = sp::coordinates(array$array$xy),
+         ## Simulate detections at receivers (across grid)
+         dat_sim_detections <- sim_detections(path = dat_sim_path$xy_mat_on_grid,   # expressed on grid
+                                              xy = sp::coordinates(array$array$xy), # expressed on grid
                                               calc_detection_pr = calc_dpr,
                                               seed = seed,
                                               plot = FALSE)
@@ -229,13 +257,18 @@ dat_sim_acoustics_4 <- dat_sim_detections_by_array[[4]]
 #### Generate archival time series
 simulate_archival <- FALSE
 if(simulate_archival){
+   # Get depth corresponding to locations
    dat_sim_archival <- data.frame(indivdual_id = 1,
                                   timestamp = study_period,
-                                  depth = raster::extract(gebco, dat_sim_path$xy_mat)
+                                  depth_sim = raster::extract(grid, dat_sim_path$xy_mat_on_grid) # on grid
                                   )
-   table(is.na(dat_sim_archival$depth))
+   table(is.na(dat_sim_archival$depth_sim))
    raster::plot(coast)
-   points(dat_sim_path$xy_mat[is.na(dat_sim_archival$depth), ], pch=".", col = "red")
+   points(dat_sim_path$xy_mat[is.na(dat_sim_archival$depth_sim), ], pch=".", col = "red")
+   # Simulate depths using a depth error model
+   dat_sim_archival$depth <- runif(1:nrow(dat_sim_archival),
+                                   dat_sim_archival$depth_sim - 5,
+                                   dat_sim_archival$depth_sim + 5)
    saveRDS(dat_sim_archival, "./data/algorithms/sim/data/dat_sim_archival.rds")
 } else {
    dat_sim_archival <- readRDS("./data/algorithms/sim/data/dat_sim_archival.rds")
@@ -246,10 +279,6 @@ if(simulate_archival){
 ######################################
 #### Examine simulated patterns of space use
 
-#### Define study area
-blank <- raster::raster(raster::extent(dat_gebco), res = c(75, 75))
-grid <- raster::resample(dat_gebco, blank)
-
 #### Define habitat/non habitat for UD estimation
 habitat <- raster::setValues(grid, 0)
 habitat <- raster::crop(habitat, ext)
@@ -259,7 +288,7 @@ habitat <- methods::as(habitat, "SpatialPixelsDataFrame")
 
 #### Estimate UD for simulated data
 dat_sim_path_spdf <- sp::SpatialPointsDataFrame(
-   dat_sim_path$xy_mat,
+   dat_sim_path$xy_mat_on_grid,
    data = data.frame(ID = factor(rep(1, nrow(dat_sim_path$xy_mat)))),
    proj4string = raster::crs(coast))
 dat_sim_path_ud <- kud_around_coastline(xy = dat_sim_path_spdf, grid = habitat)
@@ -274,14 +303,26 @@ raster::plot(dat_sim_path_ud)
 ######################################
 #### Set up algorithms (shared param)
 
-#### Set numeric algorithm parameters
-det_rng     <- 750
-step        <- 120
-clock_drift <- 5
-mob         <- 250
-
 #### Define study area
 # Define above.
+
+#### Set numeric algorithm parameters
+step             <- 120
+det_rng          <- 750      # as defined previously because on the scale of the grid
+clock_drift      <- 5
+mob_on_grid      <- 250 + 75 # mobility is higher than simulated when expressed at the resolution of the grid
+
+#### Redefine detection probability function on grid
+# This is unnecessary because we have re-expressed receiver locations on the grid.
+
+#### Define movement model over grid (slightly relaxed)
+calc_mpr_on_grid <- function(distance,...) {
+   pr <- stats::plogis(5 + distance * -0.035)
+   pr[distance > 325] <- 0
+   return(pr)
+}
+plot(1:500, calc_mpr_on_grid(1:500), type = "l")
+lines(1:500, calc_mpr(1:500), col = "red")
 
 #### Prepare movement time series
 ## Examine frequency of detections
