@@ -20,9 +20,13 @@ developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.re
 
 ## Structure
 
-1.  `data` contains data for the project.
+1.  `data-raw` contains raw data for the project.
 
-2.  `R` contains R scropts for data processing, simulation and analysis.
+2.  `data` contains data for the project.
+
+3.  `R` contains R scripts for data processing, simulation and analysis.
+
+4.  `fig` contains figures.
 
 ## Workflow
 
