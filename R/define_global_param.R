@@ -29,6 +29,10 @@ library(flapper)
 proj_wgs84 <- sp::CRS("+init=epsg:4326")
 proj_utm <- sp::CRS("+proj=utm +zone=29 +datum=WGS84 +units=m +no_defs")
 
+#### Plotting param
+bathy_zlim <- c(0, 225)
+bathy_col_param <- prettyGraphics::pretty_cols_brewer(bathy_zlim, scheme = "Blues", n_breaks = max(bathy_zlim))
+
 
 ######################################
 ######################################
@@ -54,7 +58,49 @@ calc_depth_error(c(0, 300))
 #### Receiver detection_range (m)
 detection_range <- 750
 
+#### Mobility
+mobility             <- 500
+mobility_from_origin <- mobility * 2
 
+######################################
+######################################
+#### Particle filtering parameters
+
+#### Movement model
+calc_mpr <- function(distance, data){
+  if(data$state == 0){
+    pr <- stats::plogis(7.5 + distance * -0.5)
+  } else if(data$state == 1){
+    pr <- stats::plogis(7.5 + distance * -0.05)
+  }
+  pr[pr < 0.0001] <- 0.0001
+  pr[distance > mobility] <- 0
+  return(pr)
+}
+# Plot zoom-in of state 0 model
+plot(0:50, calc_mpr(0:50, data.frame(state = 0)), ylim = c(0, 1))
+# Plot state 0 and state 1 models
+plot(0:mobility, calc_mpr(0:mobility, data.frame(state = 0)),
+     xlim = c(0, 500), ylim = c(0, 1), col = "red", type = "l")
+lines(0:mobility, calc_mpr(0:mobility, data.frame(state = 1)))
+# Check probabilities
+which.min(calc_mpr(1:mobility, data.frame(state = 0)))
+which.min(calc_mpr(1:mobility, data.frame(state = 1)))
+
+#### Movement model from origin
+# This is defined as above, but the maximum distance threshold is relaxed
+calc_mpr_from_origin <- function(distance, data){
+  if(data$state == 0){
+    pr <- stats::plogis(7.5 + distance * -0.5)
+  } else if(data$state == 1){
+    pr <- stats::plogis(7.5 + distance * -0.05)
+  }
+  pr[distance > mobility_from_origin] <- 0
+  return(pr)
+}
+
+#### Number of particles
+n_particles <- 1000
 
 
 
