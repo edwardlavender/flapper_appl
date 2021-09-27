@@ -23,7 +23,7 @@ source("./R/define_global_param.R")
 
 #### Define individual
 id <- c(1507, 1558)
-id <- id[1]
+id <- id[2]
 
 #### Load data
 root <- "./data/movement/post_release_paths/"
@@ -122,7 +122,7 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs
-# This takes ~15 minute with 1,000 particles
+# This takes ~2.5 minute with 1,000 particles
 run_lcp_interp <- FALSE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)
