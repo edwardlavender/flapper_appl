@@ -90,12 +90,6 @@ prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_core),
 ## 'background' versus 'used' sediment availability in region examined
 run_sediments <- FALSE
 if(run_sediments){
-  ## Background sediments
-  background_xy        <- raster::rasterToPoints(out_dc_map, fun = function(x) !is.na(x))
-  background_xy        <- sp::SpatialPoints(background_xy[, 1:2], proj4string = proj_utm)
-  background_sediments <- sp::over(background_xy, site_sediments)
-  saveRDS(background_sediments, "./data/spatial/site_sediments_background.rds")
-  ## 'Core' sediments
   core_xy <- raster::rasterToPoints(out_dc_map_core, fun = function(x) x==1)
   core_xy <- sp::SpatialPoints(core_xy[, 1:2], proj4string = proj_utm)
   core_sediments <- sp::over(core_xy, site_sediments)
