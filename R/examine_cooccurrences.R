@@ -158,6 +158,7 @@ pf_data$state   <- ifelse(pf_data$va_abs <= 0.5, 0, 1)
 pf_data$state[nrow(pf_data)] <- 1
 
 #### Implement ACDCPF algorithm
+# This takes ~ 25 minutes per individual.
 run <- FALSE
 if(run){
   out_acdc_record <- pf_setup_record(paste0("./data/movement/cooccurrences/", id, "/acdc/record/"))
@@ -170,13 +171,6 @@ if(run){
                    con = paste0("./data/movement/cooccurrences/", id, "/acdcpf/acdcpf_log.txt"))
   saveRDS(out_acdcpf, paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_adcpf.rds"))
 } else out_acdcpf <- readRDS(paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_adcpf.rds"))
-
-#### Comments
-# Variable times between detections probably need to be accounted for here
-# We don't really need to move over every detection if the resolution of interest is two-minutes
-# In fact its better if we don't because this will allow the individuals to move too much (?)
-# ... b/c time between detections is not long
-# So update data preparation and algorithm implementation
 
 
 ######################################
@@ -211,6 +205,10 @@ if(run_lcp_interp){
   saveRDS(out_pf_lcps,  paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_pf_lcps.rds"))
 } else out_pf_lcps <- readRDS(paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_pf_lcps.rds"))
 
+#### Check LCPs
+head(out_pf_lcps$path_lcp)
+head(out_pf_lcps$dist_lcp)
+
 #### Only consider paths for which we have been able to construct LCPS (as in examine_post_release_paths.R)
 out_pf_paths$dist_lcp <- out_pf_lcps$dist_lcp$dist
 
@@ -243,7 +241,7 @@ if(run_process_paths){
 } else {
 
   #### Load processed paths for both individuals
-  ## Processedd paths
+  ## Processed paths
   out_pf_paths_1 <- readRDS(paste0("./data/movement/cooccurrences/", 1, "/acdcpf/out_pf_paths_pro.rds"))
   out_pf_paths_2 <- readRDS(paste0("./data/movement/cooccurrences/", 2, "/acdcpf/out_pf_paths_pro.rds"))
   ## LCPs
@@ -276,12 +274,23 @@ head(out_pf_paths_2_sbt)
 out_pf_lcps_2_sbt  <- out_pf_lcps_2$path_lcp[out_pf_lcps_2$path_lcp$path_id %in% path_id_egs_2, ]
 out_pf_lcps_2_sbt  <- out_pf_lcps_2_sbt %>% dplyr::arrange(timestep)
 head(out_pf_lcps_2_sbt)
-# ................................... Problem: different numbers of time steps due to different numbers of detections, even though over the same period
+## Compare time series
+# The time series are slightly different lengths
+nrow(out_pf_paths_1_sbt); nrow(out_pf_paths_2_sbt)
 
 #### Visualise paths (2d) [use Euclidean paths for clarity] (modified from examine_post_release_paths.R)
+## Set up plot to save
 png("./fig/cooccurrences/out_pf_2d.png",
     height = 10, width = 12, units = "in", res = 800)
+## Define graphical parameters
 pp <- par(mfrow = c(1, 2))
+xlim <- range(c(out_pf_lcps_1_sbt$cell_x, out_pf_lcps_2_sbt$cell_x)); xlim
+xlim[1] <- plyr::round_any(xlim[1], accuracy = round_fct, f = floor)
+xlim[2] <- plyr::round_any(xlim[2], accuracy = round_fct, f = ceiling)
+ylim <- range(c(out_pf_lcps_1_sbt$cell_y, out_pf_lcps_2_sbt$cell_y)); ylim
+ylim[1] <- plyr::round_any(ylim[1], accuracy = round_fct, f = floor)
+ylim[2] <- plyr::round_any(ylim[2], accuracy = round_fct, f = ceiling)
+## Make plots
 lapply(list(out_pf_paths_1_sbt, out_pf_paths_2_sbt), function(out_pf_paths_sbt){
   # out_pf_paths_sbt <- out_pf_paths_1_sbt
   path_cols <- data.frame(timestep = 1:max(out_pf_paths_sbt$timestep),
@@ -289,23 +298,19 @@ lapply(list(out_pf_paths_1_sbt, out_pf_paths_2_sbt), function(out_pf_paths_sbt){
   out_pf_paths_sbt$col <- path_cols$col[match(out_pf_paths_sbt$timestep, path_cols$timestep)]
   pf_plot_2d(paths = out_pf_paths_sbt,
              bathy = site_bathy,
+             xlim = xlim, ylim = ylim,
              add_bathy = list(col = bathy_col_param$col, zlim = bathy_zlim),
-             add_paths = list(length = 0.05, col = out_pf_paths_sbt$col),
-             add_polys = list(x = site_coast, col = "dimgrey"))
+             add_paths = list(length = 0.05, col = out_pf_paths_sbt$col, lwd = 2),
+             add_polys = list(x = site_coast, col = "dimgrey"),
+             crop_spatial = TRUE)
 }) %>% invisible()
 dev.off()
 
 #### Visualise paths (3d)
 # Define graphical parameters
-shift     <- 50
+shift     <- 25
 stretch   <- -5
 round_fct <- 1000
-xlim <- range(c(out_pf_lcps_1_sbt$cell_x, out_pf_lcps_2_sbt$cell_x)); xlim
-xlim[1] <- plyr::round_any(xlim[1], accuracy = round_fct, f = floor)
-xlim[2] <- plyr::round_any(xlim[2], accuracy = round_fct, f = ceiling)
-ylim <- range(c(out_pf_lcps_1_sbt$cell_y, out_pf_lcps_2_sbt$cell_y)); ylim
-ylim[1] <- plyr::round_any(ylim[1], accuracy = round_fct, f = floor)
-ylim[2] <- plyr::round_any(ylim[2], accuracy = round_fct, f = ceiling)
 site_bathy_sbt <- raster::crop(site_bathy, raster::extent(xlim, ylim))
 
 # Define receiver coordinates
@@ -315,9 +320,9 @@ rxyz <- data.frame(x = sp::coordinates(rxy)[, 1],
 # Plot the path for ID 1
 out_pf_3d <- pf_plot_3d(paths = out_pf_lcps_1_sbt,
                         add_paths = list(line = list(color = viridis::viridis(nrow(out_pf_lcps_1_sbt)),
-                                                     width = 5)),
+                                                     width = 7.5)),
                         bathy = site_bathy_sbt,
-                        aggregate = list(fact = 2),
+                        # aggregate = list(fact = 2),
                         xlim = xlim, ylim = ylim, zlim = bathy_zlim,
                         shift = shift, stretch = stretch,
                         add_surface = list(colorscale = bathy_col_param$col),
@@ -331,7 +336,7 @@ out_pf_3d <-
                     y = out_pf_lcps_2_sbt$cell_y,
                     z = (out_pf_lcps_2_sbt$cell_z * stretch + shift),
                     line = list(color = viridis::viridis(nrow(out_pf_lcps_2_sbt)),
-                                width = 5)
+                                width = 7.5)
                     ) %>%
   plotly::layout(showlegend = FALSE)
 # Visualise plot
