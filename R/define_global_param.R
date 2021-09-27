@@ -58,6 +58,26 @@ calc_depth_error(c(0, 300))
 #### Receiver detection_range (m)
 detection_range <- 750
 
+#### Define detection probability model
+# Simulate some data that follow the results of drift testing/Klocker (2019)
+drifts <- rbind(data.frame(distance = 0, detection = rbinom(100, 1, 0.97)),
+                data.frame(distance = 425, detection = rbinom(100, 1, 0.5)),
+                data.frame(distance = detection_range + 1, detection = rbinom(100, 1, 0)))
+# Use simulated data to guestimate appropriate coefficients
+drifts_mod <- glm(detection ~ distance, family = binomial, data = drifts)
+summary(drifts_mod)
+# Define detection probability model
+calc_dpr <- function(distance) {
+  pr <- stats::plogis(4 + distance * -0.01)
+  pr[distance > detection_range] <- 0
+  return(pr)
+}
+# Examine detection probability model
+calc_dpr(0); calc_dpr(425); calc_dpr(750)
+plot(1:detection_range, calc_dpr(1:detection_range),
+     ylim = c(0, 1),
+     type = "l")
+
 #### Mobility
 mobility             <- 500
 mobility_from_origin <- mobility * 2

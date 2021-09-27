@@ -14,16 +14,309 @@
 ######################################
 #### Set up
 
-#### Wipe workspace
+#### Wipe workspace & load flapper & global param
 rm(list = ls())
+source("./R/define_global_param.R")
 
-#### Essential packages
-library(flapper)
+#### Load data
+acoustics    <- readRDS("./data/movement/tag/acoustics_eg.rds")
+moorings     <- readRDS("./data/movement/generic/moorings.rds")
+moorings_xy  <- readRDS("./data/spatial/moorings_xy.rds")
+archival     <- readRDS("./data/movement/tag/archival_eg.rds")
+site_bathy   <- raster::raster("./data/spatial/site_bathy.tif")
+site_coast   <- readRDS("./data/spatial/site_coast.rds")
+site_habitat <- readRDS("./data/spatial/site_habitat.rds")
+
+#### Process acoustic and archival time stamps
+acoustics$timestamp <- lubridate::round_date(acoustics$timestamp, "2 mins")
+archival$timestamp <- lubridate::round_date(archival$timestamp, "2 mins")
+archival <- archival[archival$timestamp >= min(acoustics$timestamp) &
+                       archival$timestamp <= max(acoustics$timestamp), ]
+head(acoustics$timestamp, 2); head(archival$timestamp, 2)
+tail(acoustics$timestamp, 2); tail(archival$timestamp, 2) # ...................... CHECK ALIGNMENT
+
+#### Define putative 'resting' behaviour (following the threshold in Lavender et al. in review)
+# I.e., moments when we suspect horizontal movement to be limited
+archival$va      <- Tools4ETS::serial_difference(archival$depth)
+archival$va_abs  <- abs(archival$va)
+archival$state   <- ifelse(archival$va_abs <= 0.5, 0, 1)
+archival$state[nrow(archival)] <- 1
 
 
 ######################################
 ######################################
-####
+#### Visualise detections
+
+#### Define detection days
+acoustics$date <- as.Date(acoustics$timestamp)
+detection_days <- get_detection_days(acoustics = acoustics, receiver_id = acoustics$receiver_id)
+moorings_xy$detection_days <-
+  detection_days$detection_days[match(moorings_xy$receiver_id,
+                                      detection_days$receiver_id)]
+
+#### Map receivers with detections, weighted by detection days
+prettyGraphics::pretty_map(
+  x = site_bathy,
+  add_rasters = list(x = site_bathy, zlim = bathy_zlim, col = bathy_col_param$col),
+  add_polys = list(x = site_coast, col = "dimgrey"),
+  add_points = list(list(x = moorings_xy, pch = 21, col = "red", bg = "red", cex = 0.5),
+                    list(x = moorings_xy, cex = moorings_xy$detection_days/4,
+                         pch = 21, bg = scales::alpha("brown", 0.5))
+                    )
+) # issue if crop_spatial = TRUE
+
+######################################
+######################################
+#### Implement the COA-KUD algorithm
+
+#### Define delta t
+delta_t <-  "48 hours"
+
+#### Check definition of delta_t
+pp <- par(mfrow = c(1, 2))
+coa_setup_delta_t(acoustics = acoustics,
+                  delta_t = delta_t,
+                  method = 1:2L,
+                  implementation = 1L)
+par(pp)
+
+#### Implement COA algorithm
+# Define moorings for the acoustic time series
+moorings_for_acc    <- moorings[moorings$receiver_id %in% acoustics$receiver_id, ]
+moorings_xy_for_acc <- moorings_xy[moorings_xy$receiver_id %in% acoustics$receiver_id, ]
+moorings_xy_for_acc <- sp::coordinates(moorings_xy_for_acc)
+# Define detection matrix
+acc_mat <- make_matrix_detections(acoustics, moorings = moorings_for_acc)
+# Check correspondance between detection matrix and mooring locations
+colnames(acc_mat)
+rownames(moorings_xy_for_acc)
+# Implement COA algorithm
+out_coa <- coa(mat = acc_mat, xy = moorings_xy_for_acc)
+# Plot COAs
+raster::plot(site_bathy)
+points(out_coa)
+points(moorings_xy_for_acc, pch = 4)
+
+#### Implement KUD estimation
+out_coa_kud <- NULL
+if(nrow(out_coa) >= 5L){
+  ## Get COA-KUD surface
+  out_coa_spdf <- sp::SpatialPointsDataFrame(
+    out_coa[, c("x", "y")],
+    data = data.frame(ID = factor(rep(1, nrow(out_coa)))),
+    proj4string = raster::crs(site_bathy))
+  out_coa_ud <- kud_around_coastline(xy = out_coa_spdf, grid = site_habitat)
+  out_coa_ud <- raster::raster(out_coa_ud[[1]])
+  ## Visualise surface
+  prettyGraphics::pretty_map(
+    x = site_bathy,
+    add_rasters = list(x = out_coa_ud),
+    add_polys = list(x = site_coast, col = "dimgrey"),
+    add_points = list(list(x = moorings_xy, pch = 21, col = "red", bg = "red", cex = 0.5),
+                      list(x = moorings_xy, cex = moorings_xy$detection_days/4,
+                           pch = 21, col = scales::alpha("brown", 0.5))
+    )
+  )
+}
+
+
+######################################
+######################################
+#### Implement the ACDC algorithms
+
+#### Isolate receivers
+## Focus on receivers within the study area
+site_poly                 <- as(raster::extent(site_bathy), "SpatialPolygons")
+raster::crs(site_poly)    <- proj_utm
+moorings_xy$in_study_site <- rgeos::gContains(site_poly, moorings_xy, byid = TRUE)
+moorings_xy               <- moorings_xy[which(moorings_xy$in_study_site), ]
+moorings                  <- moorings[moorings$receiver_id %in% moorings_xy$receiver_id, ]
+## Focus on receivers that were active during the period under consideration
+study_interval    <- lubridate::interval(as.Date(min(acoustics$timestamp)), as.Date(max(acoustics$timestamp)))
+moorings$interval <- lubridate::interval(moorings$receiver_start_date, moorings$receiver_end_date)
+moorings$overlap  <- lubridate::int_overlaps(moorings$interval, study_interval)
+moorings          <- moorings[moorings$overlap, ]
+moorings_xy       <- moorings_xy[which(moorings_xy$receiver_id %in% moorings$receiver_id), ]
+moorings$receiver_id == moorings_xy$receiver_id
+
+#### Define detection centroids
+det_centroids <- acs_setup_centroids(moorings_xy,
+                                     detection_range = detection_range,
+                                     coastline = site_coast,
+                                     boundaries = raster::extent(site_bathy),
+                                     plot = TRUE
+                                     )
+
+#### Define detection centroid overlaps
+det_centroids_overlaps <-
+  get_detection_centroids_overlap(centroids = do.call(raster::bind, plyr::compact(det_centroids)),
+                                  services = NULL)
+
+#### Define detection kernels
+run <- FALSE
+if(run){
+  site_sea <- invert_poly(site_coast)
+  det_kernels <- acs_setup_detection_kernels(xy = moorings_xy,
+                                             services = NULL,
+                                             centroids = det_centroids,
+                                             overlaps = det_centroids_overlaps,
+                                             calc_detection_pr = calc_dpr,
+                                             map = site_bathy,
+                                             coastline = sea,
+                                             boundaries = raster::extent(site_bathy))
+  saveRDS(det_kernels, "./data/movement/space_use/det_kernels.rds")
+} else det_kernels <- readRDS("./data/movement/space_use/det_kernels.rds")
+
+#### Implement the AC algorithm
+run <- FALSE
+if(run){
+  out_ac <- ac(acoustics = acoustics, # acoustics[1:3, ],
+               step = 120,
+               bathy = site_bathy,
+               detection_centroids = det_centroids,
+               detection_kernels = det_kernels,
+               detection_kernels_overlap = det_centroids_overlaps,
+               mobility = mobility,
+               write_record_spatial_for_pf =
+                 list(filename = "./data/movement/space_use/ac/record/", format = "GTiff"),
+               con = "./data/movement/space_use/ac/")
+  saveRDS(out_ac, "./data/movement/space_use/ac/out_ac.rds")
+} else out_ac <- readRDS("./data/movement/space_use/ac/out_ac.rds")
+
+
+#### Implement the ACDC algorithm
+run <- FALSE
+if(run){
+  out_acdc <- acdc(acoustics = acoustics, # acoustics[1:3, ],
+                  archival = archival,
+                  bathy = site_bathy,
+                  detection_centroids = det_centroids,
+                  detection_kernels = det_kernels,
+                  detection_kernels_overlap = det_centroids_overlaps,
+                  mobility = mobility,
+                  calc_depth_error = calc_depth_error,
+                  write_record_spatial_for_pf =
+                    list(filename = "./data/movement/space_use/acdc/record/", format = "GTiff"),
+                  con = "./data/movement/space_use/acdc/")
+  saveRDS(out_acdc, "./data/movement/space_use/acdc/out_acdc.rds")
+} else out_acdc <- readRDS("./data/movement/space_use/acdc/out_acdc.rds")
+
+
+######################################
+######################################
+#### Implement the ACPF and ACDCPF algorithms
+
+#### Implement ACPF algorithm
+run <- FALSE
+if(run){
+  out_ac_record <- pf_setup_record("./data/movement/space_use/ac/record/")
+  out_acpf <- pf(record = out_ac_record,
+                 data = archival[1:length(out_ac_record), ], #........................... UPDATE NEEDED
+                 bathy = site_bathy,
+                 calc_movement_pr = calc_mpr,
+                 mobility = mobility,
+                 n = n_particles, # 10L
+                 con = "./data/movement/space_use/acpf/acpf_log.txt")
+  saveRDS(out_acpf, "./data/movement/space_use/acpf/out_acpf.rds")
+} else out_acpf <- readRDS("./data/movement/space_use/acpf/out_acpf.rds")
+
+#### Implement ACDCPF algorithm
+run <- FALSE
+if(run){
+  out_acdc_record <- pf_setup_record("./data/movement/space_use/acdc/record/")
+  out_acdcpf <- pf(record = out_acdc_record,
+                   data = archival[1:length(out_acdc_record), ],
+                   bathy = site_bathy,
+                   calc_movement_pr = calc_mpr,
+                   mobility = mobility,
+                   n = n_particles, # 10L
+                   con = "./data/movement/space_use/acdcpf/acdcpf_log.txt")
+  saveRDS(out_acdcpf, "./data/movement/space_use/acdcpf/out_acdcpf.rds")
+} else out_acdcpf <- readRDS("./data/movement/space_use/acdcpf/out_acdcpf.rds")
+
+
+
+######################################
+######################################
+#### Particle-based maps
+
+#### Define particles for mapping
+run <- FALSE
+if(run){
+  ## ACPF
+  out_acpf_s_1 <- pf_simplify(out_acpf, return = "archive")
+  out_acpf_s_2 <- pf_simplify(out_acpf_s_1, return = "archive", summarise_pr = max)
+  saveRDS(out_acpf_s_1, "./data/movement/space_use/acpf/out_acpf_s_1.rds")
+  saveRDS(out_acpf_s_2, "./data/movement/space_use/acpf/out_acpf_s_2.rds")
+  ## ACCPF
+  out_acdcpf_s_1 <- pf_simplify(out_acdcpf, return = "archive")
+  out_acdcpf_s_2 <- pf_simplify(out_acdcpf_s_1, return = "archive", summarise_pr = max)
+  saveRDS(out_acdcpf_s_1, "./data/movement/space_use/acdcpf/out_acdcpf_s_1.rds")
+  saveRDS(out_acdcpf_s_2, "./data/movement/space_use/acdcpf/out_acdcpf_s_2.rds")
+} else {
+  ## ACPF
+  out_acpf_s_1 <- readRDS("./data/movement/space_use/acpf/out_acpf_s_1.rds")
+  out_acpf_s_2 <- readRDS("./data/movement/space_use/acpf/out_acpf_s_2.rds")
+  ## ACDCPF
+  out_acdcpf_s_1 <- readRDS("./data/movement/space_use/acdcpf/out_acdcpf_s_1.rds")
+  out_acdcpf_s_2 <- readRDS("./data/movement/space_use/acdcpf/out_acdcpf_s_2.rds")
+}
+
+#### Fit KUDs
+run <- FALSE
+if(run){
+  ## ACPF
+  out_acpf_kud <- pf_kud_2(xpf = out_acpf_s_2,
+                           bathy = site_bathy,
+                           estimate_ud = kud_around_coastline,
+                           grid = site_habitat,
+                           mask = site_bathy)
+  saveRDS(out_acpf_kud, "./data/movement/space_use/acpf/out_acpf_kud.rds")
+  ## ACDCPF
+  out_acdcpf_kud <- pf_kud_2(xpf = out_acdcpf_s_2,
+                             bathy = site_bathy,
+                             estimate_ud = kud_around_coastline,
+                             grid = site_habitat,
+                             mask = site_bathy)
+  saveRDS(out_acdcpf_kud, "./data/movement/space_use/acdcpf/out_acdcpf_kud.rds")
+} else {
+  out_acpf_kud <- readRDS("./data/movement/space_use/acpf/out_acpf_kud.rds")
+  out_acdcpf_kud <- readRDS("./data/movement/space_use/acdcpf/out_acdcpf_kud.rds")
+}
+
+
+######################################
+######################################
+#### Path-based maps (accounting for LCPs)
+
+#### Build paths
+max_n_paths <- 1000L
+out_acpf_paths <- pf_simplify(out_acpf_1, return = "path", max_n_paths = max_n_paths)
+
+#### Interpolate LCPs
+
+#### Only consider paths for which we have been able to construct LCPS
+
+#### Process paths in line with LCPs
+
+#### Apply KUD estimation to retained paths
+
+
+######################################
+######################################
+#### Visually compare maps of space use
+
+#### Define plotting param
+
+#### Map detection days
+
+#### Map COA-KUD approach
+
+#### Map selected ACPF-KUD (from particles or paths)
+
+#### Map selected ACDCPF-KUD (from particles or paths)
+
+#### Save plot
 
 
 #### End of code.
