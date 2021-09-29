@@ -66,8 +66,14 @@ out_dc_map[is.na(out_dc_map)] <- 0
 out_dc_map_pc <- (out_dc_map/nrow(archival))
 
 #### Plot map
-prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_pc),
-                           add_polys = list(x = site_coast, col = "dimgrey", border = "dimgrey"))
+png("./fig/depth_use.png",
+    height = 4, width = 5, res = 600, units = "in")
+prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_pc,
+                                              smallplot = c(0.75, 0.78, 0.3, 0.75),
+                                              axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0))),
+                           add_polys = list(x = site_coast, col = "dimgrey", border = "dimgrey"),
+                           pretty_axis_args = paa)
+dev.off()
 
 #### Map home and core ranges
 ## 'home' range

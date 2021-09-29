@@ -31,7 +31,12 @@ proj_utm <- sp::CRS("+proj=utm +zone=29 +datum=WGS84 +units=m +no_defs")
 
 #### Plotting param
 bathy_zlim <- c(0, 225)
-bathy_col_param <- prettyGraphics::pretty_cols_brewer(bathy_zlim, scheme = "Blues", n_breaks = max(bathy_zlim))
+bathy_col_param <- prettyGraphics::pretty_cols_brewer(bathy_zlim,
+                                                      scheme = "Blues",
+                                                      n_breaks = max(bathy_zlim))
+paa <- list(side = 1:4,
+            axis = list(labels = FALSE, tck = -0.01)
+            )
 
 
 ######################################
