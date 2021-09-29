@@ -23,7 +23,7 @@ source("./R/define_global_param.R")
 
 #### Define individual
 id <- c(1507, 1558)
-id <- id[2]
+id <- id[1]
 
 #### Load data
 root <- "./data/movement/post_release_paths/"
@@ -32,6 +32,69 @@ xy_release  <- readRDS(paste0(root, id, "/xy_release.rds"))
 xy_release  <- sp::coordinates(xy_release)
 site_coast  <- readRDS(paste0(root, id, "/site_coast.rds"))
 site_bathy  <- raster::raster(paste0(root, id, "/site_bathy.tif"))
+
+
+######################################
+######################################
+#### Visualise post-release depth time series
+
+#### Load individual time series
+arc_1 <- readRDS(paste0(root, "1507/archival_pr.rds"))
+arc_2 <- readRDS(paste0(root, "1558/archival_pr.rds"))
+
+#### Assign resting behaviour (as implemented below)
+# Define colors
+cols <- c("gray", "black")
+# arc_1
+arc_1$va      <- Tools4ETS::serial_difference(arc_1$depth)
+arc_1$va_abs  <- abs(arc_1$va)
+arc_1$state <- ifelse(arc_1$va_abs <= 0.5, 0, 1)
+arc_1$state[nrow(arc_1)] <- 1
+arc_1$col <- cols[factor(arc_1$state)]
+arc_1$depth_neg <- arc_1$depth * - 1
+# arc_2
+arc_2$va      <- Tools4ETS::serial_difference(arc_2$depth)
+arc_2$va_abs  <- abs(arc_2$va)
+arc_2$state <- ifelse(arc_2$va_abs <= 0.5, 0, 1)
+arc_2$state[nrow(arc_2)] <- 1
+arc_2$depth_neg <- arc_2$depth * - 1
+arc_2$col <- cols[factor(arc_2$state)]
+
+#### Plot depth/behaviour time series
+# Set up plot to save
+png("./fig/post_release_paths/depth_ts.png",
+    height = 5, width = 5, units = "in", res = 600)
+# Create blank plot
+prettyGraphics::pretty_plot(arc_1$time_index, arc_1$depth * - 1,
+                            pretty_axis_args = list(side = 3:2),
+                            xlab = "", ylab = "",
+                            type = "n")
+# Add depth time series
+s <- nrow(arc_1)
+arrows(x0 = arc_1$time_index[1:(s-1)],
+       x1 = arc_1$time_index[2:s],
+       y0 = arc_1$depth_neg[1:(s-1)],
+       y1 = arc_1$depth_neg[2:s],
+       col = arc_1$col,
+       length = 0, lwd = 2, lty = 3)
+arrows(x0 = arc_2$time_index[1:(s-1)],
+       x1 = arc_2$time_index[2:s],
+       y0 = arc_2$depth_neg[1:(s-1)],
+       y1 = arc_2$depth_neg[2:s],
+       col = arc_2$col,
+       length = 0, lwd = 2)
+# Add legend
+legend(x = 0.5, y = -175,
+       lty = c(3, 1),
+       lwd = c(2, 2),
+       legend = c(as.character(arc_1$dst_id[1]), as.character(arc_2$dst_id[1])),
+       ncol = 2,
+       box.lty = 3)
+# Add titles
+mtext(side = 3, "Time (index)", cex = 1, line = 2.5)
+mtext(side = 2, "Depth (m)", cex = 1, line = 2.5)
+# Save
+dev.off()
 
 
 ######################################
@@ -203,6 +266,7 @@ points(xy_release, pch = 21, col = "black", bg = "black", cex = 2)
 dev.off()
 
 #### Visualise paths (3d) [use interpolated LCPs]
+pt_size <- 15
 xyz_release <- cbind(xy_release, 0)
 colnames(xyz_release) <- c("x", "y", "z")
 out_pf_3d <- pf_plot_3d(paths = out_pf_lcps_sbt,
@@ -212,9 +276,11 @@ out_pf_3d <- pf_plot_3d(paths = out_pf_lcps_sbt,
                         add_surface = list(colorscale = bathy_col_param$col),
                         coastline = site_coast,
                         add_markers = list(x = xyz_release[1], y = xyz_release[2], z = xyz_release[3],
-                                           marker = list(color = "black", width = 10))
+                                           marker = list(color = "black", size = pt_size)),
+
                         )
 out_pf_3d <- out_pf_3d %>% plotly::layout(showlegend = FALSE)
+out_pf_3d
 
 #### Visualise paths [use interpolated LCPs] [zoom in]
 out_pf_3d_zoom <- pf_plot_3d(paths = out_pf_lcps_sbt,
@@ -223,11 +289,14 @@ out_pf_3d_zoom <- pf_plot_3d(paths = out_pf_lcps_sbt,
                              xlim = xlim, ylim = ylim,
                              zlim = bathy_zlim, shift = 50,
                              add_surface = list(colorscale = bathy_col_param$col),
-                             coastline = site_coast_sbt,
+                             # coastline = site_coast_sbt,
+                             # coastline_paths = list(line = list(width = 20, color = "black")),
+                             add_paths = list(line = list(width = 15)),
                              add_markers = list(x = xyz_release[1], y = xyz_release[2], z = xyz_release[3],
-                                                marker = list(color = "black", width = 10))
+                                                marker = list(color = "black", size = 30))
                              )
 out_pf_3d_zoom <- out_pf_3d_zoom %>% plotly::layout(showlegend = FALSE)
+out_pf_3d_zoom
 # Save plotly plots manually.
 
 
