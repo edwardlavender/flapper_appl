@@ -28,12 +28,7 @@ site_coast   <- readRDS("./data/spatial/site_coast.rds")
 site_habitat <- readRDS("./data/spatial/site_habitat.rds")
 
 #### Process acoustic and archival time stamps
-acoustics$timestamp <- lubridate::round_date(acoustics$timestamp, "2 mins")
-archival$timestamp <- lubridate::round_date(archival$timestamp, "2 mins")
-archival <- archival[archival$timestamp >= min(acoustics$timestamp) &
-                       archival$timestamp <= max(acoustics$timestamp), ]
-head(acoustics$timestamp, 2); head(archival$timestamp, 2)
-tail(acoustics$timestamp, 2); tail(archival$timestamp, 2) # ...................... CHECK ALIGNMENT
+# Processing implemented in process_data_raw.R
 
 #### Define putative 'resting' behaviour (following the threshold in Lavender et al. in review)
 # I.e., moments when we suspect horizontal movement to be limited
@@ -62,8 +57,10 @@ prettyGraphics::pretty_map(
   add_points = list(list(x = moorings_xy, pch = 21, col = "red", bg = "red", cex = 0.5),
                     list(x = moorings_xy, cex = moorings_xy$detection_days/4,
                          pch = 21, bg = scales::alpha("brown", 0.5))
-                    )
-) # issue if crop_spatial = TRUE
+                    ),
+  crop_spatial = TRUE
+)
+
 
 ######################################
 ######################################
@@ -101,22 +98,42 @@ points(moorings_xy_for_acc, pch = 4)
 out_coa_kud <- NULL
 if(nrow(out_coa) >= 5L){
   ## Get COA-KUD surface
-  out_coa_spdf <- sp::SpatialPointsDataFrame(
-    out_coa[, c("x", "y")],
-    data = data.frame(ID = factor(rep(1, nrow(out_coa)))),
-    proj4string = raster::crs(site_bathy))
-  out_coa_ud <- kud_around_coastline(xy = out_coa_spdf, grid = site_habitat)
-  out_coa_ud <- raster::raster(out_coa_ud[[1]])
+  get_coa <- FALSE
+  if(get_coa){
+    out_coa_spdf <- sp::SpatialPointsDataFrame(
+      out_coa[, c("x", "y")],
+      data = data.frame(ID = factor(rep(1, nrow(out_coa)))),
+      proj4string = raster::crs(site_bathy))
+    out_coa_ud <- kud_around_coastline(xy = out_coa_spdf, grid = site_habitat)
+    out_coa_ud <- raster::raster(out_coa_ud[[1]])
+    out_coa_ud <- out_coa_ud/raster::cellStats(out_coa_ud, "max")
+    saveRDS(out_coa_ud, "./data/movement/space_use/coa/out_coa_ud.rds")
+  } else out_coa_ud <- readRDS("./data/movement/space_use/coa/out_coa_ud.rds")
   ## Visualise surface
+  png("./fig/out_coa_kud.png",
+      height = 4, width = 5, res = 600, units = "in")
   prettyGraphics::pretty_map(
     x = site_bathy,
-    add_rasters = list(x = out_coa_ud),
+    add_rasters = list(x = out_coa_ud,
+                       smallplot = c(0.75, 0.78, 0.3, 0.75),
+                       axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0))),
     add_polys = list(x = site_coast, col = "dimgrey"),
-    add_points = list(list(x = moorings_xy, pch = 21, col = "red", bg = "red", cex = 0.5),
+    add_points = list(list(x = moorings_xy, pch = 21, col = "black", bg = "black", cex = 0.5),
                       list(x = moorings_xy, cex = moorings_xy$detection_days/4,
-                           pch = 21, col = scales::alpha("brown", 0.5))
-    )
+                           pch = 21, col = scales::alpha("brown", 0.5)),
+                      list(x = out_coa, pch = 4, col = "red", cex = 1.5, lwd = 0.5)
+                      ),
+    pretty_axis_args = paa
   )
+  legend(x = 701700, y = 6248600,
+         pch = c(1, 1),
+         col = scales::alpha("brown", 0.5),
+         pt.cex = c(5, 10)/4,
+         legend = c("5", "10"),
+         ncol = 2,
+         x.intersp = 0.75, y.intersp	= 0.25,
+         box.lty = 3, bg = NA)
+  dev.off()
 }
 
 
@@ -162,7 +179,7 @@ if(run){
                                              overlaps = det_centroids_overlaps,
                                              calc_detection_pr = calc_dpr,
                                              map = site_bathy,
-                                             coastline = sea,
+                                             coastline = site_sea,
                                              boundaries = raster::extent(site_bathy))
   saveRDS(det_kernels, "./data/movement/space_use/det_kernels.rds")
 } else det_kernels <- readRDS("./data/movement/space_use/det_kernels.rds")
@@ -179,7 +196,8 @@ if(run){
                mobility = mobility,
                write_record_spatial_for_pf =
                  list(filename = "./data/movement/space_use/ac/record/", format = "GTiff"),
-               con = "./data/movement/space_use/ac/")
+               con = "./data/movement/space_use/ac/"
+               )
   saveRDS(out_ac, "./data/movement/space_use/ac/out_ac.rds")
 } else out_ac <- readRDS("./data/movement/space_use/ac/out_ac.rds")
 
@@ -209,9 +227,18 @@ if(run){
 #### Implement ACPF algorithm
 run <- FALSE
 if(run){
+  ## Define data for ACPF
+  acpf_data <- acdc_access_dat(acdc_simplify(out_ac))
+  acpf_data$depth   <- acpf_data$archival_depth
+  acpf_data$va      <- Tools4ETS::serial_difference(acpf_data$depth)
+  acpf_data$va_abs  <- abs(acpf_data$va)
+  acpf_data$state   <- ifelse(acpf_data$va_abs <= 0.5, 0, 1)
+  acpf_data$state[nrow(acpf_data)] <- 1
+  ## Get record
   out_ac_record <- pf_setup_record("./data/movement/space_use/ac/record/")
+  ## Implement ACPF
   out_acpf <- pf(record = out_ac_record,
-                 data = archival[1:length(out_ac_record), ], #........................... UPDATE NEEDED
+                 data = acpf_data,
                  bathy = site_bathy,
                  calc_movement_pr = calc_mpr,
                  mobility = mobility,
@@ -223,9 +250,18 @@ if(run){
 #### Implement ACDCPF algorithm
 run <- FALSE
 if(run){
+  ## Define data for ACDCPF
+  acdcpf_data <- acdc_access_dat(acdc_simplify(out_acdc))
+  acdcpf_data$depth   <- acdcpf_data$archival_depth
+  acdcpf_data$va      <- Tools4ETS::serial_difference(acdcpf_data$depth)
+  acdcpf_data$va_abs  <- abs(acdcpf_data$va)
+  acdcpf_data$state   <- ifelse(acdcpf_data$va_abs <= 0.5, 0, 1)
+  acdcpf_data$state[nrow(acdcpf_data)] <- 1
+  ## Get record
   out_acdc_record <- pf_setup_record("./data/movement/space_use/acdc/record/")
+  ## Implement ACDCPF
   out_acdcpf <- pf(record = out_acdc_record,
-                   data = archival[1:length(out_acdc_record), ],
+                   data = acdcpf_data,
                    bathy = site_bathy,
                    calc_movement_pr = calc_mpr,
                    mobility = mobility,
@@ -248,7 +284,7 @@ if(run){
   out_acpf_s_2 <- pf_simplify(out_acpf_s_1, return = "archive", summarise_pr = max)
   saveRDS(out_acpf_s_1, "./data/movement/space_use/acpf/out_acpf_s_1.rds")
   saveRDS(out_acpf_s_2, "./data/movement/space_use/acpf/out_acpf_s_2.rds")
-  ## ACCPF
+  ## acdcpf
   out_acdcpf_s_1 <- pf_simplify(out_acdcpf, return = "archive")
   out_acdcpf_s_2 <- pf_simplify(out_acdcpf_s_1, return = "archive", summarise_pr = max)
   saveRDS(out_acdcpf_s_1, "./data/movement/space_use/acdcpf/out_acdcpf_s_1.rds")
