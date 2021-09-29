@@ -115,7 +115,7 @@ if(run){
 id <- 1:2
 id <- id[2]
 if(id == 1){
-  acoustics <- acc_1
+  acoustics <- acc_1; acc_1$acc_id[1]
   archival  <- arc_1
 } else if(id == 2){
   acoustics <- acc_2
@@ -284,6 +284,7 @@ png("./fig/cooccurrences/out_pf_2d.png",
     height = 10, width = 12, units = "in", res = 800)
 ## Define graphical parameters
 pp <- par(mfrow = c(1, 2))
+round_fct <- 1000
 xlim <- range(c(out_pf_lcps_1_sbt$cell_x, out_pf_lcps_2_sbt$cell_x)); xlim
 xlim[1] <- plyr::round_any(xlim[1], accuracy = round_fct, f = floor)
 xlim[2] <- plyr::round_any(xlim[2], accuracy = round_fct, f = ceiling)
@@ -309,8 +310,8 @@ dev.off()
 #### Visualise paths (3d)
 # Define graphical parameters
 shift     <- 25
-stretch   <- -5
-round_fct <- 1000
+stretch   <- -7.5
+line_lwd  <- 15
 site_bathy_sbt <- raster::crop(site_bathy, raster::extent(xlim, ylim))
 
 # Define receiver coordinates
@@ -320,14 +321,14 @@ rxyz <- data.frame(x = sp::coordinates(rxy)[, 1],
 # Plot the path for ID 1
 out_pf_3d <- pf_plot_3d(paths = out_pf_lcps_1_sbt,
                         add_paths = list(line = list(color = viridis::viridis(nrow(out_pf_lcps_1_sbt)),
-                                                     width = 7.5)),
+                                                     width = line_lwd)),
                         bathy = site_bathy_sbt,
                         # aggregate = list(fact = 2),
                         xlim = xlim, ylim = ylim, zlim = bathy_zlim,
                         shift = shift, stretch = stretch,
                         add_surface = list(colorscale = bathy_col_param$col),
                         add_markers = list(x = rxyz$x, y = rxyz$y, z = rxyz$z,
-                                           marker = list(color = "black"))
+                                           marker = list(color = "black", size = 20))
                         )
 # Add the path for ID 2
 out_pf_3d <-
@@ -336,11 +337,22 @@ out_pf_3d <-
                     y = out_pf_lcps_2_sbt$cell_y,
                     z = (out_pf_lcps_2_sbt$cell_z * stretch + shift),
                     line = list(color = viridis::viridis(nrow(out_pf_lcps_2_sbt)),
-                                width = 7.5)
+                                width = line_lwd)
                     ) %>%
   plotly::layout(showlegend = FALSE)
 # Visualise plot
 out_pf_3d
+
+#### Plot colour bars
+png(paste0("./fig/cooccurrences/colour_bar_time.png"),
+    height = 5, width = 3, units = "in", res = 600)
+pp <- par(oma = c(1, 1, 1, 4))
+fields::image.plot(site_bathy,
+                   zlim = c(0, nrow(out_pf_lcps_1_sbt)),
+                   legend.only = TRUE,
+                   col = viridis::viridis(nrow(out_pf_lcps_1_sbt) + 1))
+mtext(side = 4, "Time (steps)", cex = 1.25, line = 2.5)
+dev.off()
 
 #### Results
 # 1) One individual probably resting in the deep channel
