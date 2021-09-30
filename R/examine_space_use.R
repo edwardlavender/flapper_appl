@@ -36,11 +36,62 @@ archival$va      <- Tools4ETS::serial_difference(archival$depth)
 archival$va_abs  <- abs(archival$va)
 archival$state   <- ifelse(archival$va_abs <= 0.5, 0, 1)
 archival$state[nrow(archival)] <- 1
+# Define associated colours (for plotting)
+cols <- c("gray", "black")
+archival$col <- cols[factor(archival$state)]
+archival$depth_neg <- archival$depth * - 1
+acoustics$col      <- archival$col[match(acoustics$timestamp, archival$timestamp)]
+table(is.na(acoustics$col))
 
 
 ######################################
 ######################################
-#### Visualise detections
+#### Visualise movement time series
+
+#### Visualise acoustic an archival time series (as in examine_cooccurrences.R)
+acc_1 <- acoustics
+# acc_1$col <- c("black", "royalblue", "red", "orange")[factor(acoustics$receiver_id)]
+arc_1 <- archival
+# Set up figure to save
+png("./fig/space_use/movement_ts.png",
+    height = 5, width = 10, units = "in", res = 600)
+# Create blank plot
+axis_ls <-
+  prettyGraphics::pretty_plot(arc_1$timestamp, arc_1$depth * - 1,
+                              pretty_axis_args = list(side = 3:2,
+                                                      axis = list(list(format = "%d-%b-%y"), list())),
+                              xlim = range(acc_1$timestamp), ylim = c(-225, 0),
+                              xlab = "", ylab = "",
+                              type = "n")
+# Add depth time series
+s <- nrow(arc_1)
+arrows(x0 = arc_1$timestamp[1:(s-1)],
+       x1 = arc_1$timestamp[2:s],
+       y0 = arc_1$depth_neg[1:(s-1)],
+       y1 = arc_1$depth_neg[2:s],
+       col = arc_1$col,
+       length = 0, lwd = 1)
+# Add acoustic time series
+# [plot acc_1 below acc_2 (below) (following pattern of depth time series)]
+px <- par(xpd = NA)
+prettyGraphics::pretty_line(acc_1$timestamp,
+                            pretty_axis_args = list(axis_ls = axis_ls),
+                            inherit = 1L, replace = list(pos = -220, labels = FALSE, lwd.ticks = 0),
+                            add = TRUE,
+                            pch = 21, col = acc_1$col, bg = acc_1$col, lwd = 1)
+par(px)
+# Add legend
+legend(x = acc_1$timestamp[1] + 2.5e4, y = -5,
+       lty = c(1, 1), col = c("grey", "black"),
+       pch = c(21, 21), pt.bg = c("grey", "black"),
+       legend = c("Mode 0", "Mode 1"),
+       ncol = 2,
+       box.lty = 3)
+# Add titles
+mtext(side = 3, "Time (dd-mm-yy)", cex = 1, line = 2)
+mtext(side = 2, "Depth (m)", cex = 1, line = 2)
+# Save
+dev.off()
 
 #### Define detection days
 acoustics$date <- as.Date(acoustics$timestamp)
