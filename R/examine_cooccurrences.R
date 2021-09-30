@@ -35,6 +35,86 @@ site_coast   <- readRDS("./data/spatial/site_coast.rds")
 
 ######################################
 ######################################
+#### Visualise time series
+
+#### Define 'resting' behaviour as in examine_post_release_paths.R
+# Define colors
+cols <- c("gray", "black")
+# arc_1
+arc_1$va      <- Tools4ETS::serial_difference(arc_1$depth)
+arc_1$va_abs  <- abs(arc_1$va)
+arc_1$state <- ifelse(arc_1$va_abs <= 0.5, 0, 1)
+arc_1$state[nrow(arc_1)] <- 1
+arc_1$col <- cols[factor(arc_1$state)]
+arc_1$depth_neg <- arc_1$depth * - 1
+# arc_2
+arc_2$va      <- Tools4ETS::serial_difference(arc_2$depth)
+arc_2$va_abs  <- abs(arc_2$va)
+arc_2$state <- ifelse(arc_2$va_abs <= 0.5, 0, 1)
+arc_2$state[nrow(arc_2)] <- 1
+arc_2$depth_neg <- arc_2$depth * - 1
+arc_2$col <- cols[factor(arc_2$state)]
+# Copy colours to acoustics dataframe
+acc_1$col <- arc_1$col[match(acc_1$timestamp, arc_1$timestamp)]
+acc_2$col <- arc_2$col[match(acc_2$timestamp, arc_2$timestamp)]
+
+#### Plot acoustic and archival time series
+# Set up plot to save
+png("./fig/cooccurrences/movement_ts.png",
+    height = 5, width = 5, units = "in", res = 600)
+# Create blank plot
+axis_ls <-
+  prettyGraphics::pretty_plot(arc_1$timestamp, arc_1$depth * - 1,
+                              pretty_axis_args = list(side = 3:2,
+                                                      axis = list(list(format = "%H:%M"), list())),
+                              xlim = range(acc_1$timestamp), ylim = c(-225, 0),
+                              xlab = "", ylab = "",
+                              type = "n")
+# Add depth time series
+s <- nrow(arc_1)
+arrows(x0 = arc_1$timestamp[1:(s-1)],
+       x1 = arc_1$timestamp[2:s],
+       y0 = arc_1$depth_neg[1:(s-1)],
+       y1 = arc_1$depth_neg[2:s],
+       col = arc_1$col,
+       length = 0, lwd = 2, lty = 3)
+arrows(x0 = arc_2$timestamp[1:(s-1)],
+       x1 = arc_2$timestamp[2:s],
+       y0 = arc_2$depth_neg[1:(s-1)],
+       y1 = arc_2$depth_neg[2:s],
+       col = arc_2$col,
+       length = 0, lwd = 2)
+# Add acoustic time series
+# [plot acc_1 below acc_2 (below) (following pattern of depth time series)]
+px <- par(xpd = NA)
+prettyGraphics::pretty_line(acc_1$timestamp,
+                            pretty_axis_args = list(axis_ls = axis_ls),
+                            inherit = 1L, replace = list(pos = -220, labels = FALSE, lwd.ticks = 0),
+                            add = TRUE,
+                            pch = 21, col = acc_1$col, lwd = 2)
+prettyGraphics::pretty_line(acc_2$timestamp,
+                            pretty_axis_args = list(axis_ls = axis_ls),
+                            inherit = 1L, replace = list(pos = -200, labels = FALSE, lwd.ticks = 0),
+                            add = TRUE,
+                            pch = 21, col = acc_2$col, bg = acc_2$col)
+par(px)
+
+# Add legend
+legend(x = acc_1$timestamp[1] + 50, y = -5,
+       lty = c(1, 3), lwd = c(2, 2),
+       pch = c(21, 21), pt.bg = c("black", NA),
+       legend = c(as.character(acc_2$acc_id[1]), as.character(acc_1$acc_id[1])),
+       ncol = 1,
+       box.lty = 3)
+# Add titles
+mtext(side = 3, "Time (hh:mm)", cex = 1, line = 1.75)
+mtext(side = 2, "Depth (m)", cex = 1, line = 2.5)
+# Save
+dev.off()
+
+
+######################################
+######################################
 #### Define study area
 
 #### Define a buffer around the receivers at which individuals were detected
@@ -53,6 +133,7 @@ rxy_buf <- rgeos::gBuffer(rxy,
 site_bathy <- raster::crop(site_bathy, rxy_buf)
 site_coast <- raster::crop(site_coast, rxy_buf)
 site_habitat <- kud_habitat(site_bathy)
+raster::writeRaster(site_bathy, "./data/movement/cooccurrences/site_bathy.tif")
 # Visualise the study site
 raster::plot(site_bathy)
 raster::lines(site_coast, lwd = 2)
