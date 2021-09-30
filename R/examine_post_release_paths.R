@@ -65,11 +65,28 @@ arc_2$col <- cols[factor(arc_2$state)]
 png("./fig/post_release_paths/depth_ts.png",
     height = 5, width = 5, units = "in", res = 600)
 # Create blank plot
+ylim <- c(-200, 0)
 prettyGraphics::pretty_plot(arc_1$time_index, arc_1$depth * - 1,
                             pretty_axis_args = list(side = 3:2),
                             xlab = "", ylab = "",
                             type = "n")
-# Add depth time series
+# Add depth time series (as points)
+points(arc_1$time_index, arc_1$depth_neg, cex = 0.75, pch = 21, col = arc_1$col)
+points(arc_2$time_index, arc_2$depth_neg, cex = 0.75, pch = 21, col = arc_2$col, bg = arc_2$col)
+# Mark the start of the 'post-release' period
+spos <- which.max(arc_1$include)
+arrows(x0 = spos, x1 = spos,
+       y0 = arc_1$depth_neg[spos] + 40,
+       y1 = arc_1$depth_neg[spos] + 10,
+       length = 0.04)
+spos <- which.max(arc_2$include)
+arrows(x0 = spos, x1 = spos,
+       y0 = arc_2$depth_neg[spos] + 40,
+       y1 = arc_2$depth_neg[spos] + 10,
+       length = 0.04)
+# lines(rep(which.max(arc_1$include), 2), ylim, lty = 3, lwd = 0.5)
+# lines(rep(which.max(arc_2$include), 2), ylim, lwd = 0.5)
+# Add depth time series (as lines)
 s <- nrow(arc_1)
 arrows(x0 = arc_1$time_index[1:(s-1)],
        x1 = arc_1$time_index[2:s],
@@ -85,13 +102,13 @@ arrows(x0 = arc_2$time_index[1:(s-1)],
        length = 0, lwd = 2)
 # Add legend
 legend(x = 0.5, y = -175,
-       lty = c(3, 1),
-       lwd = c(2, 2),
+       lty = c(3, 1), lwd = c(2, 2),
+       pch = c(21, 21), pt.bg = c(NA, "black"),
        legend = c(as.character(arc_1$dst_id[1]), as.character(arc_2$dst_id[1])),
-       ncol = 2,
+       ncol = 2, x.intersp = 0.75,
        box.lty = 3)
 # Add titles
-mtext(side = 3, "Time (index)", cex = 1, line = 2.5)
+mtext(side = 3, "Time (index)", cex = 1, line = 1.75)
 mtext(side = 2, "Depth (m)", cex = 1, line = 2.5)
 # Save
 dev.off()
