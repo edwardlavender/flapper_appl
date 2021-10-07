@@ -76,6 +76,10 @@ prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_pc,
 dev.off()
 
 #### Map home and core ranges
+## full range
+out_dc_map_full <- out_dc_map
+out_dc_map_full[out_dc_map_full > 0] <- 1
+raster::plot(out_dc_map_full); raster::lines(site_coast, lwd = 2)
 ## 'home' range
 out_dc_map_home <- out_dc_map
 home <- raster::quantile(out_dc_map_home, 0.5)
