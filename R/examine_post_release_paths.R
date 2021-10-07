@@ -23,7 +23,7 @@ source("./R/define_global_param.R")
 
 #### Define individual
 id <- c(1507, 1558)
-id <- id[1]
+id <- id[2]
 
 #### Load data
 root <- "./data/movement/post_release_paths/"
@@ -128,6 +128,7 @@ archival_pr$state[nrow(archival_pr)] <- 1
 
 #### Filter archival_pr to focus on movements following return to the seabed
 archival_pr_from_seabed <- archival_pr[archival_pr$include, ]
+nrow(archival_pr_from_seabed)
 
 #### Examine depth time series
 prettyGraphics::pretty_plot(archival_pr_from_seabed$timestamp, archival_pr_from_seabed$depth * - 1,
@@ -182,7 +183,8 @@ if(run_pf){
 } else out_pf <- readRDS(paste0(root, id, "/pf/out_pf.rds"))
 
 #### Process paths
-# Step 1 (Stepping through time steps to join coordinate pairs) takes 18 s on one core or ~12 s on four cores
+# For 1507, this takes 0.71 minutes.
+# For 1558, this takes 0.36 minutes.
 run_pf_simplify <- FALSE
 if(run_pf_simplify){
   out_pf_paths <- pf_simplify(archive = out_pf,
@@ -202,7 +204,8 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs
-# This takes ~2.5 minute with 1,000 particles
+# For 1507, this takes 2.62 minutes with 1,000 paths.
+# For 1558, this takes 3.35 minutes with 1,000 paths.
 run_lcp_interp <- FALSE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)

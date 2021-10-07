@@ -194,7 +194,7 @@ if(run){
 
 #### Select individual and movement time series
 id <- 1:2
-id <- id[2]
+id <- id[1]
 if(id == 1){
   acoustics <- acc_1; acc_1$acc_id[1]
   archival  <- arc_1
@@ -259,7 +259,8 @@ if(run){
 #### Build paths
 
 #### Build paths (as in examine_post_release_paths.R)
-# This takes ~ 1 minute.
+# This takes 0.48 minutes for ID 1.
+# This takes 0.40 minutes for ID 2.
 run_pf_simplify <- FALSE
 if(run_pf_simplify){
   out_pf_paths <- pf_simplify(archive = out_acdcpf,
@@ -279,7 +280,8 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs (as in examine_post_release_paths.R)
-# This takes ~2 minutes with 1,000 particles
+# This takes 1.24 minutes for ID 1 with 1,000 paths
+# This takes 1.39 minutes for ID 2 with 1,000 paths
 run_lcp_interp <- FALSE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)
