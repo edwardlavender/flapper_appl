@@ -18,6 +18,10 @@
 rm(list = ls())
 source("./R/define_global_param.R")
 
+#### Set raster options
+rop <- raster::rasterOptions()
+raster::rasterOptions(tmpdir= "./data/tmp/")
+
 #### Load data
 acoustics    <- readRDS("./data/movement/tag/acoustics_eg.rds")
 moorings     <- readRDS("./data/movement/generic/moorings.rds")
@@ -238,6 +242,8 @@ if(run){
 #### Implement the AC algorithm
 run <- FALSE
 if(run){
+  cl <- parallel::makeCluster(4L)
+  parallel::clusterEvalQ(cl, library(raster))
   out_ac <- ac(acoustics = acoustics, # acoustics[1:3, ],
                step = 120,
                bathy = site_bathy,
@@ -246,16 +252,20 @@ if(run){
                detection_kernels_overlap = det_centroids_overlaps,
                mobility = mobility,
                write_record_spatial_for_pf =
-                 list(filename = "./data/movement/space_use/ac/record/", format = "GTiff"),
-               con = "./data/movement/space_use/ac/"
+                 list(filename = "./data/movement/space_use/ac/record/"),
+               con = "./data/movement/space_use/ac/",
+               cl = cl, varlist = "det_kernels"
                )
   saveRDS(out_ac, "./data/movement/space_use/ac/out_ac.rds")
+  raster::removeTmpFiles(h = 0)
 } else out_ac <- readRDS("./data/movement/space_use/ac/out_ac.rds")
 
 
 #### Implement the ACDC algorithm
 run <- FALSE
 if(run){
+  cl <- parallel::makeCluster(4L)
+  parallel::clusterEvalQ(cl, library(raster))
   out_acdc <- acdc(acoustics = acoustics, # acoustics[1:3, ],
                   archival = archival,
                   bathy = site_bathy,
@@ -265,9 +275,11 @@ if(run){
                   mobility = mobility,
                   calc_depth_error = calc_depth_error,
                   write_record_spatial_for_pf =
-                    list(filename = "./data/movement/space_use/acdc/record/", format = "GTiff"),
-                  con = "./data/movement/space_use/acdc/")
+                    list(filename = "./data/movement/space_use/acdc/record/"),
+                  con = "./data/movement/space_use/acdc/",
+                  cl = cl, varlist = "det_kernels")
   saveRDS(out_acdc, "./data/movement/space_use/acdc/out_acdc.rds")
+  raster::removeTmpFiles(h = 0)
 } else out_acdc <- readRDS("./data/movement/space_use/acdc/out_acdc.rds")
 
 
