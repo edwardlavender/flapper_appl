@@ -21,6 +21,7 @@ source("./R/define_global_param.R")
 #### Set raster options
 rop <- raster::rasterOptions()
 raster::rasterOptions(tmpdir= "./data/tmp/")
+raster::tmpDir()
 
 #### Load data
 acoustics    <- readRDS("./data/movement/tag/acoustics_eg.rds")
@@ -243,7 +244,11 @@ if(run){
 run <- FALSE
 if(run){
   cl <- parallel::makeCluster(4L)
-  parallel::clusterEvalQ(cl, library(raster))
+  parallel::clusterEvalQ(cl,
+                         {
+                           library(raster)
+                           raster::rasterOptions(tmpdir = "./data/tmp/")
+                         })
   out_ac <- ac(acoustics = acoustics, # acoustics[1:3, ],
                step = 120,
                bathy = site_bathy,
@@ -265,7 +270,11 @@ if(run){
 run <- FALSE
 if(run){
   cl <- parallel::makeCluster(4L)
-  parallel::clusterEvalQ(cl, library(raster))
+  parallel::clusterEvalQ(cl,
+                         {
+                           library(raster)
+                           raster::rasterOptions(tmpdir = "./data/tmp/")
+                         })
   out_acdc <- acdc(acoustics = acoustics, # acoustics[1:3, ],
                   archival = archival,
                   bathy = site_bathy,
@@ -290,23 +299,34 @@ if(run){
 #### Implement ACPF algorithm
 run <- FALSE
 if(run){
-  ## Define data for ACPF
+
+  #### Define data for ACPF
+  # Get data
   acpf_data <- acdc_access_dat(acdc_simplify(out_ac))
-  acpf_data$depth   <- acpf_data$archival_depth
+  acpf_data$depth   <- archival$depth[1:(nrow(archival)-1)]
   acpf_data$va      <- Tools4ETS::serial_difference(acpf_data$depth)
   acpf_data$va_abs  <- abs(acpf_data$va)
   acpf_data$state   <- ifelse(acpf_data$va_abs <= 0.5, 0, 1)
   acpf_data$state[nrow(acpf_data)] <- 1
   ## Get record
-  out_ac_record <- pf_setup_record("./data/movement/space_use/ac/record/")
-  ## Implement ACPF
+  out_ac_record <- pf_setup_record("./data/movement/space_use/ac/record/", pattern = "*.grd")
+
+  #### Time trials for PF
+  # See examine_space_use_time_trials.R
+
+  #### Implement algorithm
+  sink("./data/movement/space_use/acpf/rgass_log.txt")
+  pf_opts <- pf_setup_optimisers(use_calc_distance_euclid_backend_grass = TRUE,
+                                 use_grass_dir = "/Applications/GRASS-7.4.4.app/Contents/Resources")
   out_acpf <- pf(record = out_ac_record,
                  data = acpf_data,
                  bathy = site_bathy,
                  calc_movement_pr = calc_mpr,
-                 mobility = mobility,
-                 n = n_particles, # 10L
-                 con = "./data/movement/space_use/acpf/acpf_log.txt")
+                 n = n_particles,
+                 write_history = list(file = "./data/movement/space_use/acpf/history/"),
+                 con = "./data/movement/space_use/acpf/acpf_log.txt",
+                 optimisers = pf_opts)
+  sink()
   saveRDS(out_acpf, "./data/movement/space_use/acpf/out_acpf.rds")
 } else out_acpf <- readRDS("./data/movement/space_use/acpf/out_acpf.rds")
 
@@ -315,21 +335,26 @@ run <- FALSE
 if(run){
   ## Define data for ACDCPF
   acdcpf_data <- acdc_access_dat(acdc_simplify(out_acdc))
-  acdcpf_data$depth   <- acdcpf_data$archival_depth
+  acdcpf_data$depth   <- archival$depth[1:(nrow(archival)-1)]
   acdcpf_data$va      <- Tools4ETS::serial_difference(acdcpf_data$depth)
   acdcpf_data$va_abs  <- abs(acdcpf_data$va)
   acdcpf_data$state   <- ifelse(acdcpf_data$va_abs <= 0.5, 0, 1)
   acdcpf_data$state[nrow(acdcpf_data)] <- 1
   ## Get record
-  out_acdc_record <- pf_setup_record("./data/movement/space_use/acdc/record/")
+  out_acdc_record <- pf_setup_record("./data/movement/space_use/acdc/record/", pattern = "*.grd")
   ## Implement ACDCPF
+  sink("./data/movement/space_use/acdcpf/rgass_log.txt")
+  pf_opts <- pf_setup_optimisers(use_calc_distance_euclid_backend_grass = TRUE,
+                                 use_grass_dir = "/Applications/GRASS-7.4.4.app/Contents/Resources")
   out_acdcpf <- pf(record = out_acdc_record,
                    data = acdcpf_data,
                    bathy = site_bathy,
                    calc_movement_pr = calc_mpr,
-                   mobility = mobility,
                    n = n_particles, # 10L
-                   con = "./data/movement/space_use/acdcpf/acdcpf_log.txt")
+                   write_history = list(file = "./data/movement/space_use/acdcpf/history/"),
+                   con = "./data/movement/space_use/acdcpf/acdcpf_log.txt",
+                   optimisers = pf_opts)
+  sink()
   saveRDS(out_acdcpf, "./data/movement/space_use/acdcpf/out_acdcpf.rds")
 } else out_acdcpf <- readRDS("./data/movement/space_use/acdcpf/out_acdcpf.rds")
 
@@ -343,14 +368,23 @@ if(run){
 run <- FALSE
 if(run){
   ## ACPF
-  out_acpf_s_1 <- pf_simplify(out_acpf, return = "archive")
+  out_acpf$args$mobility <- mobility
+  out_acpf_s_1 <- pf_simplify(out_acpf, return = "archive",
+                              write_history = list(file = "/Users/el72/Desktop/tmp/"),
+                              cl = parallel::makeCluster(8L), varlist = "mobility")
   out_acpf_s_2 <- pf_simplify(out_acpf_s_1, return = "archive", summarise_pr = max)
   saveRDS(out_acpf_s_1, "./data/movement/space_use/acpf/out_acpf_s_1.rds")
   saveRDS(out_acpf_s_2, "./data/movement/space_use/acpf/out_acpf_s_2.rds")
   ## acdcpf
+  # Step 1: remove dead ends and distances
+  sink("./data/movement/space_use/acdcpf/pf_simplify_1.txt")
   out_acdcpf_s_1 <- pf_simplify(out_acdcpf, return = "archive")
-  out_acdcpf_s_2 <- pf_simplify(out_acdcpf_s_1, return = "archive", summarise_pr = max)
+  sink()
   saveRDS(out_acdcpf_s_1, "./data/movement/space_use/acdcpf/out_acdcpf_s_1.rds")
+  # Step 2: Drop duplicate samples
+  sink("./data/movement/space_use/acdcpf/pf_simplify_2.txt")
+  out_acdcpf_s_2 <- pf_simplify(out_acdcpf_s_1, return = "archive", summarise_pr = max)
+  sink()
   saveRDS(out_acdcpf_s_2, "./data/movement/space_use/acdcpf/out_acdcpf_s_2.rds")
 } else {
   ## ACPF
