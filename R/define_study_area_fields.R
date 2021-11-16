@@ -1,9 +1,9 @@
 ######################################
 ######################################
-#### get_study_area_fields.R
+#### define_study_area_fields.R
 
 #### This code:
-# 1) Gets study area spatial fields (e.g., study site boundaries)
+# 1) Defines study area spatial fields (e.g., study site boundaries)
 # ... for mapping the study area via the QGIS projecct in ./fig/study_site/
 
 #### Steps preceding this code:
