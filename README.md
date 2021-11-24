@@ -87,7 +87,7 @@ used on a few occasions.
             [Digimap](https://digimap.edina.ac.uk);
           - `sediments/` contains a map of sediment types (named
             `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et
-            al. (2015) and Boroswava et al. (2018);
+            al. (2015) and Boswarva et al. (2018);
       - `process_data_raw.R` processes raw data as required for each
         analysis.
 
@@ -107,7 +107,7 @@ used on a few occasions.
         the study area;
       - `examine_depth_use.R` implements A1;
       - `examine_space_use.R` implements A2, supported by
-        `examine_space_use_time_trials.R`;
+        `examine_space_use_time_trials.R` and `evaluate_lcps.R`;
       - `examine_post_release_paths.R` implements A3;
       - `examine_coocccurrences.R` implements A4;
 
@@ -131,7 +131,8 @@ version of this repository.
     `define_study_area_fields.R`.
 
 3.  **Implement algorithms.** Implement A1–4 via `examine_depth_use.R`,
-    `examine_space_use.R` (and `examine_space_use_time_trials.R`),
+    `examine_space_use.R` (together with
+    `examine_space_use_time_trials.R` and `evaluate_lcps.R`),
     `examine_post_release_paths.R` and `examine_cooccurrences.R`
     respectively.
 
@@ -164,6 +165,5 @@ Royal Society of Edinburgh, 105(4), 273–284.
 
 ## Citation
 
-Lavender et al. (in prep). A holistic framework and a new family of
-algorithms for reconstructing movement paths and patterns of space use
-from passive acoustic telemetry.
+Lavender et al. (in prep). A semi-stochastic modelling framework for
+passive acoustic telemetry.

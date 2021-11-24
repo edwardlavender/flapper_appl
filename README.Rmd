@@ -53,7 +53,7 @@ The analyses are written in `R` and organised as an `R Project`. For data proces
     * `spatial/` contains spatial data for the study area:
         * `bathy/` contains a 5 x 5 m bathymetry raster (named `bathy_res_full_ext_full_abs.tif`), sourced from Howe et al. (2015); 
         * `coastline/` contains a 1:10,000 coastline layer (named `westminster_const_region.shp`) from [Digimap](https://digimap.edina.ac.uk); 
-        * `sediments/` contains a map of sediment types (named `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et al. (2015) and Boroswava et al. (2018); 
+        * `sediments/` contains a map of sediment types (named `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et al. (2015) and Boswarva et al. (2018); 
     
     * `process_data_raw.R` processes raw data as required for each analysis. 
 
@@ -67,7 +67,7 @@ The analyses are written in `R` and organised as an `R Project`. For data proces
     * `define_global_param.R` defines global parameters, such as projections, detection and movement parameters; 
     * `define_study_area_fields.R` defines spatial fields for mapping the study area; 
     * `examine_depth_use.R` implements A1; 
-    * `examine_space_use.R` implements A2, supported by `examine_space_use_time_trials.R`;
+    * `examine_space_use.R` implements A2, supported by `examine_space_use_time_trials.R` and `evaluate_lcps.R`;
     * `examine_post_release_paths.R` implements A3;
     * `examine_coocccurrences.R` implements A4;
    
@@ -81,7 +81,7 @@ Note that `data-raw/`, `data/` and `fig/` are not included in the online version
 
 2. **Define global parameters.** Define global parameters via `define_global_param.R` and study area fields via `define_study_area_fields.R`. 
 
-3. **Implement algorithms.** Implement A1--4 via `examine_depth_use.R`, `examine_space_use.R` (and `examine_space_use_time_trials.R`), `examine_post_release_paths.R` and `examine_cooccurrences.R` respectively. 
+3. **Implement algorithms.** Implement A1--4 via `examine_depth_use.R`, `examine_space_use.R` (together with `examine_space_use_time_trials.R` and `evaluate_lcps.R`), `examine_post_release_paths.R` and `examine_cooccurrences.R` respectively. 
 
 4. **Examine results.** Examine reconstructed patterns of depth and space use, post-release movement paths and fine-scale spatial partitioning during periods of cooccurring detections for the selected individuals. 
 
@@ -97,4 +97,4 @@ Howe et al. (2015). The seabed geomorphology and geological structure of the Fir
 
 ## Citation
 
-Lavender et al. (in prep). A holistic framework and a new family of algorithms for reconstructing movement paths and patterns of space use from passive acoustic telemetry. 
+Lavender et al. (in prep). A semi-stochastic modelling framework for passive acoustic telemetry. 
