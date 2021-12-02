@@ -87,6 +87,21 @@ plot(1:detection_range, calc_dpr(1:detection_range),
 mobility             <- 500
 mobility_from_origin <- mobility * 2
 
+#### Euclidean-distance threshold (from evaluate_lcps.R)
+euclid_distance_limit         <- 481
+euclid_distance_barrier_limit <- 421
+# These parameters support particle processing routines, by
+# ... restricting the number of LCP calculations that are required.
+# ... For distances 421-481, we will check barrier overlaps
+# ... and for the subset of cell pairs that overlap with the coastline
+# ... we will calculate LCPs.
+# ... We will calculate LCPs for all cell connections exceeding 481 m
+# ... in Euclidean distances.
+# ... Thus, all distances less than 421 m and distances between 421--481 m
+# ... are assumed to be less than mobility. LCPs are only calculated for the
+# ... remaining cell pairs.
+
+
 ######################################
 ######################################
 #### Particle filtering parameters
