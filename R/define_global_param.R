@@ -102,7 +102,7 @@ plot(1:detection_range, calc_dpr(1:detection_range),
 mobility             <- 500
 mobility_from_origin <- mobility * 2
 
-#### Euclidean-distance threshold (from evaluate_lcps.R)
+#### Euclidean-distance threshold (from examine_lcps.R)
 euclid_distance_limit         <- 481
 euclid_distance_barrier_limit <- 421
 # These parameters support particle processing routines, by

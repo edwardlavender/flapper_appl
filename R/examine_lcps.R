@@ -1,6 +1,6 @@
 ######################################
 ######################################
-#### evaluate_lcps.R
+#### examine_lcps.R
 
 #### This code:
 # 1) Evaluates the use of Euclidean distances as an approximation
