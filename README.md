@@ -107,7 +107,8 @@ used on a few occasions.
         the study area;
       - `examine_depth_use.R` implements A1;
       - `examine_space_use.R` implements A2, supported by
-        `examine_space_use_time_trials.R` and `evaluate_lcps.R`;
+        `examine_space_use_time_trials.R`, `examine_lcps.R` and
+        `examine_habitat_preferences.R`;
       - `examine_post_release_paths.R` implements A3;
       - `examine_coocccurrences.R` implements A4;
 
@@ -132,14 +133,15 @@ version of this repository.
 
 3.  **Implement algorithms.** Implement A1–4 via `examine_depth_use.R`,
     `examine_space_use.R` (together with
-    `examine_space_use_time_trials.R` and `evaluate_lcps.R`),
-    `examine_post_release_paths.R` and `examine_cooccurrences.R`
-    respectively.
+    `examine_space_use_time_trials.R`, `examine_lcps.R` and
+    `examine_habitat_preferences.R`), `examine_post_release_paths.R` and
+    `examine_cooccurrences.R` respectively.
 
 4.  **Examine results.** Examine reconstructed patterns of depth and
-    space use, post-release movement paths and fine-scale spatial
-    partitioning during periods of cooccurring detections for the
-    selected individuals.
+    space use and their implications in analyses of habitat preferences;
+    post-release movement paths and fine-scale spatial partitioning
+    during periods of cooccurring detections for the selected
+    individuals.
 
 <img src="README_img.png"/>
 
