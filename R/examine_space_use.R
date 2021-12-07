@@ -529,15 +529,13 @@ if(run){
 
   #### ACPF
   out_acpf_pou <- pf_plot_map(out_acpf_s,
-                              map = site_bathy,
-                              scale = "sum")
+                              map = site_bathy)
   raster::cellStats(out_acpf_pou, "sum")
   raster::writeRaster(out_acpf_pou, "./data/movement/space_use/acpf/out_acpf_pou.tif")
 
   #### ACDCPF [38 s]
   out_acdcpf_pou <- pf_plot_map(out_acdcpf_s,
-                                map = site_bathy,
-                                scale = "sum")
+                                map = site_bathy)
   raster::cellStats(out_acdcpf_pou, "sum")
   raster::writeRaster(out_acdcpf_pou, "./data/movement/space_use/acdcpf/out_acdcpf_pou.tif")
 
@@ -587,7 +585,35 @@ if(run){
 ######################################
 #### Visualise maps of space use
 
+#### Process POU layers
+# [Not currently implemented for consistency across all plots]
+# Set zero areas to NA (white) so that they stand out more clearly
+out_acpf_pou_2 <- out_acpf_pou
+# out_acpf_pou_2[out_acpf_pou_2 == 0] <- NA
+out_acdcpf_pou_2 <- out_acdcpf_pou
+# out_acdcpf_pou_2[out_acdcpf_pou_2 == 0] <- NA
+
 #### POU maps
+png("./fig/space_use/pou_maps.png",
+    height = 4, width = 8, res = 600, units = "in")
+pp <- par(mfrow = c(1, 2), oma = c(0, 0, 0, 4), mar = c(1, 2, 1, 2))
+
+legend_param <- list(smallplot = c(0.88, 0.92, 0.27, 0.77),
+                     axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.25)
+                     )
+prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acpf_pou_2), legend_param),
+                           add_polys = add_coast,
+                           pretty_axis_args = paa)
+add_map_elements()
+mtext(side = 3, bquote(bold(.("A")) ~ "(ACPF)"), adj = 0.05, line = -2, cex = 1.25)
+prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acdcpf_pou_2), legend_param),
+                           add_polys = add_coast,
+                           pretty_axis_args = paa)
+mtext(side = 3, bquote(bold(.("B")) ~ "(ACDCPF)"), adj = 0.05, line = -2, cex = 1.25)
+mtext(side = 4, "POU", line = 3.75, cex = 1.25)
+add_map_elements()
+par(pp)
+dev.off()
 
 #### KUD maps [code modified from examine_depth_use.R to match graphical parameters]
 ## ACPF
@@ -603,10 +629,10 @@ prettyGraphics::pretty_map(add_rasters = list(x = out_acpf_kud_scaled_to_one,
 add_map_elements()
 dev.off()
 ## ACDCPF
-png("./fig/space_use/out_acpf_kud.png",
+png("./fig/space_use/out_acdcpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
-out_acpf_kud_scaled_to_one <- out_acpf_kud/raster::cellStats(out_acpf_kud, "max")
-prettyGraphics::pretty_map(add_rasters = list(x = out_acpf_kud_scaled_to_one,
+out_acdcpf_kud_scaled_to_one <- out_acdcpf_kud/raster::cellStats(out_acdcpf_kud, "max")
+prettyGraphics::pretty_map(add_rasters = list(x = out_acdcpf_kud_scaled_to_one,
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
