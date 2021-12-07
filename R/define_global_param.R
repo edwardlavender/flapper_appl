@@ -30,13 +30,28 @@ proj_wgs84 <- sp::CRS("+init=epsg:4326")
 proj_utm <- sp::CRS("+proj=utm +zone=29 +datum=WGS84 +units=m +no_defs")
 
 #### Plotting param
+## Coastline
+add_coast <- list(x = site_coast,
+                  col = "dimgrey", # scales::alpha("dimgrey", 0.85),
+                  border = "dimgrey")
+## Bathymetry parameters
 bathy_zlim <- c(0, 225)
 bathy_col_param <- prettyGraphics::pretty_cols_brewer(bathy_zlim,
                                                       scheme = "Blues",
                                                       n_breaks = max(bathy_zlim))
+## Map axes
 paa <- list(side = 1:4,
             axis = list(labels = FALSE, tck = -0.01)
             )
+## North arrow and scale bar
+add_map_elements <- function(){
+  arrow_y0 <- 6247000 # 6247700
+  arrows(x0 = 714000, y0 = arrow_y0, y1 = arrow_y0 + 2000, length = 0.1, lwd = 2)
+  raster::scalebar(d = 2 * 1000,
+                   label = "2 km", font = 2,
+                   xy = c(712000, 6247000),
+                   lonlat = FALSE)
+}
 
 
 ######################################
