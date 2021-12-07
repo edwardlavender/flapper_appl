@@ -164,21 +164,21 @@ if(nrow(out_coa) >= 5L){
       out_coa[, c("x", "y")],
       data = data.frame(ID = factor(rep(1, nrow(out_coa)))),
       proj4string = raster::crs(site_bathy))
-    out_coa_ud <- kud_around_coastline(xy = out_coa_spdf, grid = site_habitat_lr)
-    out_coa_ud <- raster::raster(out_coa_ud[[1]])
-    out_coa_ud <- raster::resample(out_coa_ud, site_bathy)
-    out_coa_ud <- raster::mask(out_coa_ud, site_bathy)
-    out_coa_ud <- out_coa_ud/raster::cellStats(out_coa_ud, "sum")
-    raster::cellStats(out_coa_ud, "sum")
-    # out_coa_ud <- out_coa_ud/raster::cellStats(out_coa_ud, "max")
-    raster::writeRaster(out_coa_ud, "./data/movement/space_use/coa/out_coa_ud.tif")
-  } else out_coa_ud <- raster::raster("./data/movement/space_use/coa/out_coa_ud.tif")
+    out_coa_kud <- kud_around_coastline(xy = out_coa_spdf, grid = site_habitat_lr)
+    out_coa_kud <- raster::raster(out_coa_kud[[1]])
+    out_coa_kud <- raster::resample(out_coa_kud, site_bathy)
+    out_coa_kud <- raster::mask(out_coa_kud, site_bathy)
+    out_coa_kud <- out_coa_kud/raster::cellStats(out_coa_kud, "sum")
+    raster::cellStats(out_coa_kud, "sum")
+    # out_coa_kud <- out_coa_kud/raster::cellStats(out_coa_kud, "max")
+    raster::writeRaster(out_coa_kud, "./data/movement/space_use/coa/out_coa_kud.tif")
+  } else out_coa_kud <- raster::raster("./data/movement/space_use/coa/out_coa_kud.tif")
   ## Visualise surface
   png("./fig/out_coa_kud.png",
       height = 4, width = 5, res = 600, units = "in")
   prettyGraphics::pretty_map(
     x = site_bathy,
-    add_rasters = list(x = out_coa_ud,
+    add_rasters = list(x = out_coa_kud,
                        smallplot = c(0.75, 0.78, 0.3, 0.75),
                        axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0))),
     add_polys = list(x = site_coast, col = "dimgrey"),
@@ -225,8 +225,7 @@ det_centroids <- acs_setup_centroids(moorings_xy,
                                      detection_range = detection_range,
                                      coastline = site_coast,
                                      boundaries = raster::extent(site_bathy),
-                                     plot = TRUE
-)
+                                     plot = TRUE)
 
 #### Define detection centroid overlaps
 det_centroids_overlaps <-
@@ -242,9 +241,7 @@ if(run){
                                              centroids = det_centroids,
                                              overlaps = det_centroids_overlaps,
                                              calc_detection_pr = calc_dpr,
-                                             map = site_bathy,
-                                             coastline = site_sea,
-                                             boundaries = raster::extent(site_bathy))
+                                             bathy = site_bathy)
   saveRDS(det_kernels, "./data/movement/space_use/det_kernels.rds")
 } else det_kernels <- readRDS("./data/movement/space_use/det_kernels.rds")
 
@@ -270,6 +267,9 @@ if(run){
                cl = cl, varlist = "det_kernels"
   )
   saveRDS(out_ac, "./data/movement/space_use/ac/out_ac.rds")
+  out_ac_s <- acdc_simplify(out_ac, mask = site_bathy)
+  saveRDS(out_ac_s, "./data/movement/space_use/ac/out_ac_s.rds")
+  raster::writeRaster(out_ac_s$map, "./data/movement/space_use/ac/out_ac_map.tif")
   raster::removeTmpFiles(h = 0)
 } else out_ac <- readRDS("./data/movement/space_use/ac/out_ac.rds")
 
@@ -296,6 +296,9 @@ if(run){
                    con = "./data/movement/space_use/acdc/",
                    cl = cl, varlist = "det_kernels")
   saveRDS(out_acdc, "./data/movement/space_use/acdc/out_acdc.rds")
+  out_acdc_s <- acdc_simplify(out_acdc, mask = site_bathy)
+  saveRDS(out_acdc_s, "./data/movement/space_use/acdc/out_acdc_s.rds")
+  raster::writeRaster(out_acdc_s$map, "./data/movement/space_use/acdc/out_acdc_map.tif")
   raster::removeTmpFiles(h = 0)
 } else out_acdc <- readRDS("./data/movement/space_use/acdc/out_acdc.rds")
 
@@ -521,8 +524,8 @@ if(run){
 
   #### ACPF
   out_acpf_pou <- pf_plot_map(out_acpf_s,
-                                map = site_bathy,
-                                scale = "sum")
+                              map = site_bathy,
+                              scale = "sum")
   raster::cellStats(out_acpf_pou, "sum")
   raster::writeRaster(out_acpf_pou, "./data/movement/space_use/acpf/out_acpf_pou.tif")
 
@@ -544,7 +547,7 @@ if(run){
 run <- FALSE
 if(run){
 
-  #### ACPF
+  #### ACPF [6.57 hours]
   t1 <- Sys.time()
   out_acpf_kud <- pf_kud_2(xpf = out_acpf_s,
                            # sample_size = 100L,
@@ -556,7 +559,7 @@ if(run){
   difftime(t2, t1)
   raster::writeRaster(out_acpf_kud, "./data/movement/space_use/acpf/out_acpf_kud.tif")
 
-  ## ACDCPF [4.7 hours]
+  ## ACDCPF [4.70 hours]
   t1 <- Sys.time()
   out_acdcpf_kud <- pf_kud_2(xpf = out_acdcpf_s,
                              # sample_size = 100L,
@@ -577,19 +580,8 @@ if(run){
 
 ######################################
 ######################################
-#### Visually compare maps of space use
+#### Visualise maps of space use
 
-#### Define plotting param
-
-#### Map detection days
-
-#### Map COA-KUD approach
-
-#### Map selected ACPF-KUD
-
-#### Map selected ACDCPF-KUD
-
-#### Save plot
 
 
 #### End of code.
