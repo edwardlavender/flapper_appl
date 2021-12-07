@@ -96,7 +96,7 @@ names(maps) <- maps_names
 # ... ignored by default, so the home ranges are derived based on quantiles
 # ... in 'used' areas.
 ## Set up figure to save
-png("./fig/core_ranges.png",
+png("./fig/habitat_preferences/core_ranges.png",
     height = 8, width = 6, units = "in", res = 600)
 pp <- par(mfcol = c(length(maps), 2),
           oma = c(1, 1, 1, 6), mar = rep(0.5, 4),
@@ -165,7 +165,7 @@ par(pp)
 dev.off()
 
 ## Save legend
-png("./fig/core_ranges_legend.png",
+png("./fig/habitat_preferences/core_ranges_legend.png",
     height = 8, width = 3, units = "in", res = 600)
 # pp <- par(oma = c(2, 2, 2, 2))
 fields::image.plot(zlim = c(0, 1),
@@ -277,7 +277,7 @@ width <- 1
 space <- c(0, 1)
 
 #### Define barplot
-png("./fig/habitat_preferences_sediments.png",
+png("./fig/habitat_preferences/habitat_preferences_sediments.png",
     height = 5, width = 12, units = "in", res = 600)
 pp <- par(oma = c(2, 2, 2, 2))
 b <- barplot(dat_sediments_mat,
