@@ -174,14 +174,16 @@ if(nrow(out_coa) >= 5L){
     raster::writeRaster(out_coa_kud, "./data/movement/space_use/coa/out_coa_kud.tif")
   } else out_coa_kud <- raster::raster("./data/movement/space_use/coa/out_coa_kud.tif")
   ## Visualise surface
-  png("./fig/out_coa_kud.png",
-      height = 4, width = 5, res = 600, units = "in")
+  png("./fig/space_use/out_coa_kud.png",
+      height = 5, width = 6, res = 600, units = "in")
+  out_coa_kud_scaled_to_one <- out_coa_kud/raster::cellStats(out_coa_kud, "max")
   prettyGraphics::pretty_map(
     x = site_bathy,
-    add_rasters = list(x = out_coa_kud,
-                       smallplot = c(0.75, 0.78, 0.3, 0.75),
-                       axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0))),
-    add_polys = list(x = site_coast, col = "dimgrey"),
+    add_rasters = list(x = out_coa_kud_scaled_to_one,
+                       zlim = c(0, 1),
+                       smallplot = c(0.785, 0.825, 0.27, 0.77),
+                       axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
+    add_polys = add_coast,
     add_points = list(list(x = moorings_xy, pch = 21, col = "black", bg = "black", cex = 0.5),
                       list(x = moorings_xy, cex = moorings_xy$detection_days/4,
                            pch = 21, col = scales::alpha("brown", 0.5)),
@@ -189,14 +191,17 @@ if(nrow(out_coa) >= 5L){
     ),
     pretty_axis_args = paa
   )
-  legend(x = 701700, y = 6248600,
+  legend(x = 701700, y = 6248700,
          pch = c(1, 1),
          col = scales::alpha("brown", 0.5),
          pt.cex = c(5, 10)/4,
          legend = c("5", "10"),
          ncol = 2,
-         x.intersp = 0.75, y.intersp	= 0.25,
-         box.lty = 3, bg = NA)
+         x.intersp = 0.5, y.intersp	= 0.25,
+         box.lty = 3, bg = NA,
+         cex = 1.5)
+  add_map_elements()
+  mtext(side = 4, "Intensity", cex = 2, line = 0.5)
   dev.off()
 }
 
@@ -582,6 +587,33 @@ if(run){
 ######################################
 #### Visualise maps of space use
 
+#### POU maps
+
+#### KUD maps [code modified from examine_depth_use.R to match graphical parameters]
+## ACPF
+png("./fig/space_use/out_acpf_kud.png",
+    height = 5, width = 6, res = 600, units = "in")
+out_acpf_kud_scaled_to_one <- out_acpf_kud/raster::cellStats(out_acpf_kud, "max")
+prettyGraphics::pretty_map(add_rasters = list(x = out_acpf_kud_scaled_to_one,
+                                              zlim = c(0, 1),
+                                              plot_method = raster::plot,
+                                              legend = FALSE),
+                           add_polys = add_coast,
+                           pretty_axis_args = paa)
+add_map_elements()
+dev.off()
+## ACDCPF
+png("./fig/space_use/out_acpf_kud.png",
+    height = 5, width = 6, res = 600, units = "in")
+out_acpf_kud_scaled_to_one <- out_acpf_kud/raster::cellStats(out_acpf_kud, "max")
+prettyGraphics::pretty_map(add_rasters = list(x = out_acpf_kud_scaled_to_one,
+                                              zlim = c(0, 1),
+                                              plot_method = raster::plot,
+                                              legend = FALSE),
+                           add_polys = add_coast,
+                           pretty_axis_args = paa)
+add_map_elements()
+dev.off()
 
 
 #### End of code.

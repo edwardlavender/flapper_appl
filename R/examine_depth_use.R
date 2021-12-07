@@ -53,28 +53,50 @@ if(run_dc){
   saveRDS(out_dc, "./data/movement/depth_use/dc/out_dc.rds")
 } else out_dc <- readRDS("./data/movement/depth_use/dc/out_dc.rds")
 
-#### Process out_dc
-out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy)
 
-#### Check availability of depth contours at each time step [all TRUE]
-out_dc_dat <- acdc_access_dat(out_dc_s)
-table(out_dc_dat$availability)
+######################################
+######################################
+#### Implement DC processing
 
-#### Process map (for plotting)
-out_dc_map <- out_dc_s$map
-raster::writeRaster(out_dc_map, "./data/movement/depth_use/dc/out_dc_map.tif")
+run_dc_processing <- FALSE
+if(run_dc_processing){
+  #### Process out_dc
+  out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy)
+
+  #### Check availability of depth contours at each time step [all TRUE]
+  out_dc_dat <- acdc_access_dat(out_dc_s)
+  table(out_dc_dat$availability)
+
+  #### Process map (for plotting)
+  out_dc_map <- out_dc_s$map
+  raster::writeRaster(out_dc_map, "./data/movement/depth_use/dc/out_dc_map.tif")
+
+} else out_dc_map <- raster::raster("./data/movement/depth_use/dc/out_dc_map.tif")
+
 out_dc_map[is.na(out_dc_map)] <- 0
 out_dc_map_pc <- (out_dc_map/nrow(archival))
 
+
+######################################
+######################################
+#### Map results
+
 #### Plot map
-png("./fig/depth_use.png",
-    height = 4, width = 5, res = 600, units = "in")
+png("./fig/depth_use/out_dc_map.png",
+    height = 5, width = 6, res = 600, units = "in")
 prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_pc,
-                                              smallplot = c(0.75, 0.78, 0.3, 0.75),
-                                              axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0))),
-                           add_polys = list(x = site_coast, col = "dimgrey", border = "dimgrey"),
+                                              smallplot = c(0.785, 0.825, 0.27, 0.77),
+                                              axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
+                           add_polys = add_coast,
                            pretty_axis_args = paa)
+mtext(side = 4, "POU", cex = 2, line = 1.25)
+add_map_elements()
 dev.off()
+
+
+######################################
+######################################
+#### Explore home/core ranges
 
 #### Map home and core ranges
 ## full range
