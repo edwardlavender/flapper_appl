@@ -56,12 +56,13 @@ if(run_dc){
 #### Process out_dc
 out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy)
 
-#### Check availability of depth contours at each time step
+#### Check availability of depth contours at each time step [all TRUE]
 out_dc_dat <- acdc_access_dat(out_dc_s)
 table(out_dc_dat$availability)
 
 #### Process map (for plotting)
 out_dc_map <- out_dc_s$map
+raster::writeRaster(out_dc_map, "./data/movement/depth_use/dc/out_dc_map.tif")
 out_dc_map[is.na(out_dc_map)] <- 0
 out_dc_map_pc <- (out_dc_map/nrow(archival))
 
@@ -105,7 +106,7 @@ if(run_sediments){
   core_sediments <- sp::over(core_xy, site_sediments)
   saveRDS(core_sediments, "./data/movement/depth_use/dc/core_sediments.rds")
 } else {
-  core_sediments <- readRDS("./data/movement/depth_use/dc/core_sedimenrts.rds")
+  core_sediments <- readRDS("./data/movement/depth_use/dc/core_sediments.rds")
   background_sediments <- readRDS("./data/spatial/site_sediments_background.rds")
 }
 ## Examine putative sediment use versus availability
