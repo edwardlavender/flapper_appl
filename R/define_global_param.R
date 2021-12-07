@@ -31,7 +31,7 @@ proj_utm <- sp::CRS("+proj=utm +zone=29 +datum=WGS84 +units=m +no_defs")
 
 #### Plotting param
 ## Coastline
-add_coast <- list(x = site_coast,
+add_coast <- list(x = readRDS("./data/spatial/site_coast.rds"),
                   col = "dimgrey", # scales::alpha("dimgrey", 0.85),
                   border = "dimgrey")
 ## Bathymetry parameters
