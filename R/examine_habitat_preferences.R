@@ -278,8 +278,9 @@ space <- c(0, 1)
 
 #### Define barplot
 png("./fig/habitat_preferences/habitat_preferences_sediments.png",
-    height = 5, width = 12, units = "in", res = 600)
-pp <- par(oma = c(2, 2, 2, 2))
+    height = 4, width = 18, units = "in", res = 600)
+pp <- par(oma = c(3.5, 2.5, 0, 0), mar = c(3.5, 2.5, 1, 1))
+cex.axis <- 1.9
 b <- barplot(dat_sediments_mat,
              # Define bar placement
              beside = TRUE, width = width, space = c(0, 1),
@@ -290,20 +291,20 @@ b <- barplot(dat_sediments_mat,
              # Add legend
              legend.text = rownames(dat_sediments_mat),
              # args.legend = list(x = 8, y = 0.4, bty = "n", border = NA)) # legend placement for all maps
-             args.legend = list(x = 5, y = 0.4, bty = "n", border = NA))
+             args.legend = list(x = 5.5, y = 0.425, bty = "n", border = NA, cex = cex.axis))
 
 #### Add axes
-cex.axis <- 0.8
 xat <- apply(b, 2, mean)
-pm <- par(mgp = c(3, 1.5, 0))
+pm <- par(mgp = c(3, 3, 0))
 axis(side = 1, at = c(0, max(xat) + width), labels = FALSE, lwd.ticks = 0, pos = 0)
 axis(side = 1, at = xat, labels = xlab, pos = 0, cex.axis = cex.axis)
 par(pm)
 axis(side = 2, las = TRUE, pos = 0, cex.axis = cex.axis)
 
 #### Add titles
-mtext(side = 1, "Sediment", line = 3)
-mtext(side = 2, "Proportion", line = 2.5)
+cex.title <- 2.25
+mtext(side = 1, "Sediment", cex = cex.title, line = 5.5)
+mtext(side = 2, "Proportion", cex = cex.title, line = 3)
 dev.off()
 
 
