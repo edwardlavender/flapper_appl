@@ -527,15 +527,21 @@ if(run){
 run <- FALSE
 if(run){
 
-  #### ACPF
+  #### ACPF [1.43 minutes]
+  t1 <- Sys.time()
   out_acpf_pou <- pf_plot_map(out_acpf_s,
                               map = site_bathy)
+  t2 <- Sys.time()
+  difftime(t2, t1, units = "mins")
   raster::cellStats(out_acpf_pou, "sum")
   raster::writeRaster(out_acpf_pou, "./data/movement/space_use/acpf/out_acpf_pou.tif")
 
-  #### ACDCPF [38 s]
+  #### ACDCPF [0.6667 mins]
+  t1 <- Sys.time()
   out_acdcpf_pou <- pf_plot_map(out_acdcpf_s,
                                 map = site_bathy)
+  t2 <- Sys.time()
+  difftime(t2, t1, units = "mins")
   raster::cellStats(out_acdcpf_pou, "sum")
   raster::writeRaster(out_acdcpf_pou, "./data/movement/space_use/acdcpf/out_acdcpf_pou.tif")
 
@@ -551,6 +557,7 @@ run <- FALSE
 if(run){
 
   #### ACPF [6.57 hours]
+  nrow(dplyr::bind_rows(out_acpf_s$history))
   t1 <- Sys.time()
   out_acpf_kud <- pf_kud_2(xpf = out_acpf_s,
                            # sample_size = 100L,
@@ -563,6 +570,7 @@ if(run){
   raster::writeRaster(out_acpf_kud, "./data/movement/space_use/acpf/out_acpf_kud.tif")
 
   ## ACDCPF [4.70 hours]
+  nrow(dplyr::bind_rows(out_acdcpf_s$history))
   t1 <- Sys.time()
   out_acdcpf_kud <- pf_kud_2(xpf = out_acdcpf_s,
                              # sample_size = 100L,
