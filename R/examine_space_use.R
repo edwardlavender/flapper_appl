@@ -626,6 +626,31 @@ add_map_elements()
 par(pp)
 dev.off()
 
+#### POU maps [artefacts]
+## Purpose
+# Here, we plot ACPF in more detail, with receiver locations, to examine artefacts
+# ... in the reconstructed map that emerge from the array design and/or
+# ... specific model parameters.
+## Set up map to save
+png("./fig/space_use/out_acpf_pou_with_receivers.png",
+    height = 12, width = 12, units = "in", res = 1200)
+## Plot POU map
+raster::plot(out_acpf_pou)
+## Add receiver locations (labelled)
+rxy <- sp::coordinates(moorings_xy)
+text(rxy[, 1], rxy[, 2], labels = moorings_xy$receiver_id, pch = 4)
+## Check the receiver's at which the individual was detected
+table(acoustics$receiver_id)
+#  3   30    36   37
+# 533 3224   36  269
+## Add receiver centroids
+centroids   <- rgeos::gBuffer(moorings_xy, width = detection_range, byid = TRUE)
+centroids_2 <- rgeos::gBuffer(moorings_xy, width = 500, byid = TRUE)
+raster::lines(centroids)
+raster::lines(centroids_2, col = "blue")
+## Save
+dev.off()
+
 #### KUD maps [code modified from examine_depth_use.R to match graphical parameters]
 ## ACPF
 png("./fig/space_use/out_acpf_kud.png",
