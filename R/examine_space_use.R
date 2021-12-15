@@ -602,6 +602,7 @@ out_acdcpf_pou_2 <- out_acdcpf_pou
 # out_acdcpf_pou_2[out_acdcpf_pou_2 == 0] <- NA
 
 #### POU maps
+# Note the appearence of artefacts for the ACPF POU map; these are highlighted manually.
 png("./fig/space_use/pou_maps.png",
     height = 4, width = 8, res = 600, units = "in")
 pp <- par(mfrow = c(1, 2), oma = c(0, 0, 0, 4), mar = c(1, 2, 1, 2))
@@ -612,6 +613,7 @@ legend_param <- list(smallplot = c(0.88, 0.92, 0.27, 0.77),
 prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acpf_pou_2), legend_param),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
+points(moorings_xy, pch = 21, bg = "black", cex = 0.5)
 add_map_elements()
 mtext(side = 3, bquote(bold(.("A")) ~ "(ACPF)"), adj = 0.05, line = -2, cex = 1.25)
 prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acdcpf_pou_2), legend_param),
@@ -619,6 +621,7 @@ prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acdcpf_p
                            pretty_axis_args = paa)
 mtext(side = 3, bquote(bold(.("B")) ~ "(ACDCPF)"), adj = 0.05, line = -2, cex = 1.25)
 mtext(side = 4, "POU", line = 3.75, cex = 1.25)
+points(moorings_xy, pch = 21, bg = "black", cex = 0.5)
 add_map_elements()
 par(pp)
 dev.off()
