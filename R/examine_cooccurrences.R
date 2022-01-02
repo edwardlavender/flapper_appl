@@ -8,7 +8,8 @@
 # ... to examine possible interactions and fine-scale spatial partitioning.
 
 #### Steps preceding this code:
-# 1)
+# 1) Define global parameters via define_global_param.R
+# 2) Process raw data via process_data_raw.R
 
 
 ######################################
@@ -194,7 +195,7 @@ if(run){
 
 #### Select individual and movement time series
 id <- 1:2
-id <- id[1]
+id <- id[2]
 if(id == 1){
   acoustics <- acc_1; acc_1$acc_id[1]
   archival  <- arc_1
@@ -202,6 +203,7 @@ if(id == 1){
   acoustics <- acc_2
   archival  <- arc_2
 } else stop("ID unrecognised.")
+acoustics$index <- 1:nrow(acoustics)
 
 #### Process acoustic and archival time stamps (as in examine_space_use.R)
 # Implemented in process_data_raw.R
@@ -242,6 +244,9 @@ pf_data$state[nrow(pf_data)] <- 1
 # This takes ~ 25 minutes per individual.
 run <- FALSE
 if(run){
+  sink(paste0("./data/movement/cooccurrences/", id, "/acdcpf/rgass_log.txt"))
+  pf_opts <- pf_setup_optimisers(use_calc_distance_euclid_backend_grass = TRUE,
+                                 use_grass_dir = "/Applications/GRASS-7.4.4.app/Contents/Resources")
   out_acdc_record <- pf_setup_record(paste0("./data/movement/cooccurrences/", id, "/acdc/record/"))
   out_acdcpf <- pf(record = out_acdc_record,
                    data = pf_data,
@@ -249,7 +254,9 @@ if(run){
                    calc_movement_pr = calc_mpr,
                    mobility = mobility,
                    n = n_particles, # 10L
-                   con = paste0("./data/movement/cooccurrences/", id, "/acdcpf/acdcpf_log.txt"))
+                   con = paste0("./data/movement/cooccurrences/", id, "/acdcpf/acdcpf_log.txt"),
+                   optimisers = pf_opts)
+  sink()
   saveRDS(out_acdcpf, paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_adcpf.rds"))
 } else out_acdcpf <- readRDS(paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_adcpf.rds"))
 
@@ -259,8 +266,8 @@ if(run){
 #### Build paths
 
 #### Build paths (as in examine_post_release_paths.R)
-# This takes 0.48 minutes for ID 1.
-# This takes 0.40 minutes for ID 2.
+# This takes 0.55 minutes for ID 1.
+# This takes 0.42 minutes for ID 2.
 run_pf_simplify <- FALSE
 if(run_pf_simplify){
   out_pf_paths <- pf_simplify(archive = out_acdcpf,
@@ -280,8 +287,8 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs (as in examine_post_release_paths.R)
-# This takes 1.24 minutes for ID 1 with 1,000 paths
-# This takes 1.39 minutes for ID 2 with 1,000 paths
+# This takes 1.55 minutes for ID 1 with 1,000 paths
+# This takes 1.88 minutes for ID 2 with 1,000 paths
 run_lcp_interp <- FALSE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)
