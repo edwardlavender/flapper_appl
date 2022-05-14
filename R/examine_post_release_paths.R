@@ -5,7 +5,7 @@
 #### This code:
 # 1) Implements the DCPF algorithm for example individuals that
 # ... appear to exhibit irregular post-release behaviour by
-# ... Lavender et al (in review) to reconstruct possible
+# ... Lavender et al (2022) to reconstruct possible
 # ... post-release movement paths.
 
 #### Steps preceding this code:
@@ -145,6 +145,7 @@ if(run_dc){
   out_dc <- dc(archival = archival_pr_from_seabed,
                bathy = site_bathy,
                calc_depth_error = calc_depth_error,
+               normalise = TRUE,
                write_record_spatial_for_pf = list(filename = paste0(root, id, "/dc/record/"), format = "GTiff", overwrite = TRUE),
                con = paste0(root, id, "/dc/dc_log.txt"),
                split = split,
@@ -168,6 +169,7 @@ out_dc_record <- pf_setup_record(paste0(root, id, "/dc/record/"), type = "dc")
 # For consistency, for both individuals, n = 1000 particles are used.
 run_pf <- FALSE
 if(run_pf){
+  raster::cellStats(raster::raster(out_dc_record[1]), "sum")
   out_pf <- pf(record = out_dc_record,
                data = archival_pr_from_seabed,
                origin = xy_release,
@@ -183,8 +185,8 @@ if(run_pf){
 } else out_pf <- readRDS(paste0(root, id, "/pf/out_pf.rds"))
 
 #### Process paths
-# For 1507, this takes 0.71 minutes.
-# For 1558, this takes 0.36 minutes.
+# For 1507, this takes 0.36 minutes.
+# For 1558, this takes 0.39 minutes.
 run_pf_simplify <- FALSE
 if(run_pf_simplify){
   out_pf_paths <- pf_simplify(archive = out_pf,
@@ -204,8 +206,8 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs
-# For 1507, this takes 2.62 minutes with 1,000 paths.
-# For 1558, this takes 3.35 minutes with 1,000 paths.
+# For 1507, this takes 2.82 minutes with 1,000 paths.
+# For 1558, this takes 3.05 minutes with 1,000 paths.
 run_lcp_interp <- FALSE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)
@@ -303,7 +305,8 @@ out_pf_3d <- out_pf_3d %>% plotly::layout(showlegend = FALSE)
 out_pf_3d
 
 #### Visualise paths [use interpolated LCPs] [zoom in]
-out_pf_3d_zoom <- pf_plot_3d(paths = out_pf_lcps_sbt,
+# [out_pf_lcps_sbt$path_id == unique(out_pf_lcps_sbt$path_id)[5], ]
+out_pf_3d_zoom <- pf_plot_3d(paths = out_pf_lcps_sbt ,
                              bathy = site_bathy_sbt,
                              # aggregate = list(fact = 2),
                              xlim = xlim, ylim = ylim,

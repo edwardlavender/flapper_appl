@@ -31,7 +31,7 @@ site_sediments <- readRDS("./data/spatial/site_sediments.rds")
 #### Implement DC algorithm
 
 #### Implement algorithm
-# This takes 1 hr 40 mins with 4 cores
+# This takes 1 hr 40 mins with 4 cores (3 hr 38 m with write_record_spatial_for_pf)
 run_dc <- FALSE
 if(run_dc){
 
@@ -46,11 +46,12 @@ if(run_dc){
                bathy = site_bathy,
                calc_depth_error = calc_depth_error,
                check_availability = TRUE,
-               # write_record_spatial_for_pf = list(filename = "./data/movement/depth_use/dc/record/", format = "GTiff"),
+               write_record_spatial_for_pf = list(filename = "./data/movement/depth_use/dc/record/"),
                con = "./data/movement/depth_use/dc/dc_log.txt",
                split = split,
                cl = cl)
   saveRDS(out_dc, "./data/movement/depth_use/dc/out_dc.rds")
+
 } else out_dc <- readRDS("./data/movement/depth_use/dc/out_dc.rds")
 
 
@@ -73,8 +74,14 @@ if(run_dc_processing){
 
 } else out_dc_map <- raster::raster("./data/movement/depth_use/dc/out_dc_map.tif")
 
+#### Map processing
 out_dc_map[is.na(out_dc_map)] <- 0
 out_dc_map_pc <- (out_dc_map/nrow(archival))
+raster::cellStats(out_dc_map_pc, "sum")
+out_dc_map_pc <- out_dc_map_pc/raster::cellStats(out_dc_map_pc, "max")
+raster::plot(out_dc_map)
+raster::plot(out_dc_map > 0)
+raster::lines(site_coast)
 
 
 ######################################
@@ -84,12 +91,13 @@ out_dc_map_pc <- (out_dc_map/nrow(archival))
 #### Plot map
 png("./fig/depth_use/out_dc_map.png",
     height = 5, width = 6, res = 600, units = "in")
-prettyGraphics::pretty_map(add_rasters = list(x = out_dc_map_pc,
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_dc_map_pc),
                                               smallplot = c(0.785, 0.825, 0.27, 0.77),
                                               axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 mtext(side = 4, "POU", cex = 2, line = 1.25)
+add_contour(out_dc_map_pc)
 add_map_elements()
 dev.off()
 

@@ -152,12 +152,13 @@ core_hr_by_map <- cl_lapply(1:length(maps), fun = function(i){
   add_map_elements()
   mtext(side = 3, title_1, cex = 1.25, font = 2, adj = 0.025, line = -2.25)
   # Plot core range
-  get_hr_core(map,
-              add_raster = add_map,
-              add_polys = add_coast,
-              pretty_axis_args = paa_for_map_2)
+  out <- get_hr_core(map,
+                     add_raster = add_map,
+                     add_polys = add_coast,
+                     pretty_axis_args = paa_for_map_2)
   add_map_elements()
   mtext(side = 3, title_2, cex = 1.25, font = 2, adj = 0.025, line = -2.25)
+  return(out)
 })
 add_map_elements()
 names(core_hr_by_map) <- names(maps)
@@ -172,7 +173,7 @@ fields::image.plot(zlim = c(0, 1),
                    col = rev(terrain.colors(255)),
                    axis.args = list(cex.axis = 1.25),
                    legend.only = TRUE)
-mtext(side = 4, "Intensity", line = 1, cex = 1.25)
+mtext(side = 4, "Score", line = 1, cex = 1.25)
 # par(pp)
 dev.off()
 
@@ -186,8 +187,8 @@ dat_sediments_bkg <- table(site_sediments_bkg$seabed_sub)/sum(table(site_sedimen
 dat_sediments_bkg <- data.frame(sediment = factor(names(dat_sediments_bkg)),
                                 availability = as.numeric(dat_sediments_bkg))
 
-#### Get sediment 'use', according to each algorithm [~ 15 minutes]
-run_sediments <- FALSE
+#### Get sediment 'use', according to each algorithm [~ 1 minute]
+run_sediments <- TRUE
 if(run_sediments){
   core_sediments_by_map <-
     cl_lapply(1:length(core_hr_by_map), fun = function(i){
@@ -291,7 +292,7 @@ b <- barplot(dat_sediments_mat,
              # Add legend
              legend.text = rownames(dat_sediments_mat),
              # args.legend = list(x = 8, y = 0.4, bty = "n", border = NA)) # legend placement for all maps
-             args.legend = list(x = 5.5, y = 0.425, bty = "n", border = NA, cex = cex.axis))
+             args.legend = list(x = 5.5, y = 0.65, bty = "n", border = NA, cex = cex.axis))
 
 #### Add axes
 xat <- apply(b, 2, mean)
@@ -299,7 +300,7 @@ pm <- par(mgp = c(3, 3, 0))
 axis(side = 1, at = c(0, max(xat) + width), labels = FALSE, lwd.ticks = 0, pos = 0)
 axis(side = 1, at = xat, labels = xlab, pos = 0, cex.axis = cex.axis)
 par(pm)
-axis(side = 2, las = TRUE, pos = 0, cex.axis = cex.axis)
+axis(side = 2, seq(0, 0.6, by = 0.2), las = TRUE, pos = 0, cex.axis = cex.axis)
 
 #### Add titles
 cex.title <- 2.25

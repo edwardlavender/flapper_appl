@@ -38,6 +38,7 @@ site_habitat_lr <- readRDS("./data/spatial/site_habitat_lr.rds")
 
 #### Process acoustic and archival time stamps
 # Processing implemented in process_data_raw.R
+acoustics$index <- 1:nrow(acoustics)
 
 #### Define putative 'resting' behaviour (following the threshold in Lavender et al. in review)
 # I.e., moments when we suspect horizontal movement to be limited
@@ -179,7 +180,7 @@ if(nrow(out_coa) >= 5L){
   out_coa_kud_scaled_to_one <- out_coa_kud/raster::cellStats(out_coa_kud, "max")
   prettyGraphics::pretty_map(
     x = site_bathy,
-    add_rasters = list(x = out_coa_kud_scaled_to_one,
+    add_rasters = list(x = white_out(out_coa_kud_scaled_to_one),
                        zlim = c(0, 1),
                        smallplot = c(0.785, 0.825, 0.27, 0.77),
                        axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
@@ -191,6 +192,7 @@ if(nrow(out_coa) >= 5L){
     ),
     pretty_axis_args = paa
   )
+  add_contour(out_coa_kud)
   legend(x = 701700, y = 6248700,
          pch = c(1, 1),
          col = scales::alpha("brown", 0.5),
@@ -201,7 +203,7 @@ if(nrow(out_coa) >= 5L){
          box.lty = 3, bg = NA,
          cex = 1.5)
   add_map_elements()
-  mtext(side = 4, "Intensity", cex = 2, line = 0.5)
+  mtext(side = 4, "Score", cex = 2, line = 0.5)
   dev.off()
 }
 
@@ -265,6 +267,7 @@ if(run){
                detection_centroids = det_centroids,
                detection_kernels = det_kernels,
                detection_kernels_overlap = det_centroids_overlaps,
+               normalise = TRUE,
                mobility = mobility,
                write_record_spatial_for_pf =
                  list(filename = "./data/movement/space_use/ac/record/"),
@@ -276,7 +279,10 @@ if(run){
   saveRDS(out_ac_s, "./data/movement/space_use/ac/out_ac_s.rds")
   raster::writeRaster(out_ac_s$map, "./data/movement/space_use/ac/out_ac_map.tif")
   raster::removeTmpFiles(h = 0)
-} else out_ac <- readRDS("./data/movement/space_use/ac/out_ac.rds")
+} else {
+  out_ac   <- readRDS("./data/movement/space_use/ac/out_ac.rds")
+  out_ac_s <- readRDS("./data/movement/space_use/ac/out_ac_s.rds")
+}
 
 
 #### Implement the ACDC algorithm
@@ -294,6 +300,7 @@ if(run){
                    detection_centroids = det_centroids,
                    detection_kernels = det_kernels,
                    detection_kernels_overlap = det_centroids_overlaps,
+                   normalise = TRUE,
                    mobility = mobility,
                    calc_depth_error = calc_depth_error,
                    write_record_spatial_for_pf =
@@ -305,7 +312,10 @@ if(run){
   saveRDS(out_acdc_s, "./data/movement/space_use/acdc/out_acdc_s.rds")
   raster::writeRaster(out_acdc_s$map, "./data/movement/space_use/acdc/out_acdc_map.tif")
   raster::removeTmpFiles(h = 0)
-} else out_acdc <- readRDS("./data/movement/space_use/acdc/out_acdc.rds")
+} else {
+  out_acdc   <- readRDS("./data/movement/space_use/acdc/out_acdc.rds")
+  out_acdc_s <- readRDS("./data/movement/space_use/acdc/out_acdc_s.rds")
+}
 
 
 ######################################
@@ -318,7 +328,7 @@ if(run){
 
   #### Define data for ACPF
   # Get data
-  acpf_data <- acdc_access_dat(acdc_simplify(out_ac))
+  acpf_data <- acdc_access_dat(out_ac_s)
   acpf_data$depth   <- archival$depth[1:(nrow(archival)-1)]
   acpf_data$va      <- Tools4ETS::serial_difference(acpf_data$depth)
   acpf_data$va_abs  <- abs(acpf_data$va)
@@ -350,7 +360,7 @@ if(run){
 run <- FALSE
 if(run){
   ## Define data for ACDCPF
-  acdcpf_data <- acdc_access_dat(acdc_simplify(out_acdc))
+  acdcpf_data <- acdc_access_dat(out_acdc_s)
   acdcpf_data$depth   <- archival$depth[1:(nrow(archival)-1)]
   acdcpf_data$va      <- Tools4ETS::serial_difference(acdcpf_data$depth)
   acdcpf_data$va_abs  <- abs(acdcpf_data$va)
@@ -417,53 +427,6 @@ if(run){
   site_coast_distances <- raster::raster("./data/spatial/site_coast_distances.tif")
 }
 
-#### Define cost surface (~ 2 minutes + time to save)
-run <- FALSE
-if(run){
-  site_bathy_costs <- lcp_costs(site_bathy)
-  saveRDS(site_bathy_costs, "./data/movement/space_use/site_bathy_costs.rds")
-} else site_bathy_costs <- readRDS("./data/movement/space_use/site_bathy_costs.rds")
-
-#### Define graph (~ 2 minutes + time to save)
-run <- FALSE
-if(run){
-  site_bathy_graph <- lcp_graph_surface(surface = site_bathy,
-                                        cost = site_bathy_costs$dist_total
-  )
-  saveRDS(site_bathy_graph, "./data/movement/space_use/site_bathy_graph.rds")
-} else site_bathy_graph <- readRDS("./data/movement/space_use/site_bathy_graph.rds")
-
-#### Graph processing
-run <- FALSE
-if(run){
-  # Get unique cells
-  acpf_cells_unq   <- pf_access_particles_unique(out_acpf)
-  acdcpf_cells_unq <- pf_access_particles_unique(out_acdcpf)
-  cells_unq        <- unique(c(acpf_cells_unq, acdcpf_cells_unq))
-  # Simplify graph [duration: a few s]
-  t1_a <- Sys.time()
-  site_bathy_graph_simp <- cppRouting::cpp_simplify(site_bathy_graph,
-                                                    keep = cells_unq,
-                                                    rm_loop = TRUE,
-                                                    iterate = TRUE,
-                                                    silent = FALSE)
-  # Confirm that all sampled cells are in the simplified graph
-  all(as.character(cells_unq) %in% site_bathy_graph$dict$ref)
-  t2_b <- Sys.time()
-  difftime(t2_b, t1_a)
-  # Contract simplified graph [duration: >3 days --> not implemented]
-  # t1_b <- Sys.time()
-  # site_bathy_graph_cont <- cppRouting::cpp_contract(site_bathy_graph_simp)
-  # t2_b <- Sys.time()
-  # difftime(t2_b, t1_b)
-  # Save processed graphs
-  saveRDS(site_bathy_graph_simp, "./data/movement/space_use/site_bathy_graph_simp.rds")
-  # saveRDS(site_bathy_graph_cont, "./data/movement/space_use/site_bathy_graph_cont.rds")
-} else {
-  site_bathy_graph_simp <- readRDS("./data/movement/space_use/site_bathy_graph_simp.rds")
-  # site_bathy_graph_cont <- readRDS("./data/movement/space_use/site_bathy_graph_cont.rds")
-}
-
 
 ######################################
 #### Define particles for mapping
@@ -476,14 +439,11 @@ if(run){
   t1 <- Sys.time()
   out_acpf_s <- pf_simplify(out_acpf,
                             calc_distance = "lcp",
-                            calc_distance_graph = site_bathy_graph,
-                            calc_distance_limit = euclid_distance_limit,
+                            calc_distance_lcp_fast = lcp_predict,
                             calc_distance_barrier = site_barrier,
                             calc_distance_barrier_limit = euclid_distance_barrier_limit,
-                            calc_distance_restrict = TRUE,
                             calc_distance_barrier_grid = site_coast_grid,
-                            calc_distance_algorithm = "Dijkstra",
-                            summarise_pr = max,
+                            summarise_pr = TRUE,
                             write_history = list(file = "./data/movement/space_use/acpf/processing/"),
                             cl = 10L,
                             return = "archive")
@@ -497,14 +457,11 @@ if(run){
   t1 <- Sys.time()
   out_acdcpf_s <- pf_simplify(out_acdcpf,
                               calc_distance = "lcp",
-                              calc_distance_graph = site_bathy_graph,
-                              calc_distance_limit = euclid_distance_limit,
+                              calc_distance_lcp_fast = lcp_predict,
                               calc_distance_barrier = site_barrier,
                               calc_distance_barrier_limit = euclid_distance_barrier_limit,
-                              calc_distance_restrict = TRUE,
                               calc_distance_barrier_grid = site_coast_grid,
-                              calc_distance_algorithm = "Dijkstra",
-                              summarise_pr = max,
+                              summarise_pr = TRUE,
                               write_history = list(file = "./data/movement/space_use/acdcpf/processing/"),
                               cl = 10L,
                               return = "archive")
@@ -527,7 +484,7 @@ if(run){
 run <- FALSE
 if(run){
 
-  #### ACPF [1.43 minutes]
+  #### ACPF [1.389438 minutes]
   t1 <- Sys.time()
   out_acpf_pou <- pf_plot_map(out_acpf_s,
                               map = site_bathy)
@@ -536,7 +493,7 @@ if(run){
   raster::cellStats(out_acpf_pou, "sum")
   raster::writeRaster(out_acpf_pou, "./data/movement/space_use/acpf/out_acpf_pou.tif")
 
-  #### ACDCPF [0.6667 mins]
+  #### ACDCPF [0.6285052 mins]
   t1 <- Sys.time()
   out_acdcpf_pou <- pf_plot_map(out_acdcpf_s,
                                 map = site_bathy)
@@ -556,31 +513,48 @@ if(run){
 run <- FALSE
 if(run){
 
-  #### ACPF [6.57 hours]
-  nrow(dplyr::bind_rows(out_acpf_s$history))
+  #### ACPF [11.43265 hours]
+  length(raster::Which(out_acpf_pou > 0, cells = TRUE, na.rm = TRUE)) * 100
+  out_acpf_pou_agg <- raster::aggregate(out_acpf_pou, fact = 4)
+  out_acpf_pou_agg <- out_acpf_pou_agg/raster::cellStats(out_acpf_pou_agg, "sum")
+  length(raster::Which(out_acpf_pou_agg > 0, cells = TRUE, na.rm = TRUE)) * 100
   t1 <- Sys.time()
-  out_acpf_kud <- pf_kud_2(xpf = out_acpf_s,
-                           # sample_size = 100L,
-                           bathy = site_bathy,
-                           estimate_ud = kud_around_coastline,
-                           grid = site_habitat_lr,
-                           mask = site_bathy)
+  out_acpf_kud_agg <-
+    pf_kud(out_acpf_pou_agg,
+           estimate_ud = flapper::kud_around_coastline,
+           sample_size = 100,
+           # trial_cells = list(10, 1000, 10000),
+           grid = site_habitat_lr)
   t2 <- Sys.time()
   difftime(t2, t1)
+  raster::cellStats(out_acpf_kud_agg, "sum")
+  out_acpf_kud <- raster::resample(out_acpf_kud_agg, site_bathy)
+  out_acpf_kud <- raster::mask(out_acpf_kud, site_bathy)
+  raster::cellStats(out_acpf_kud, "sum")
+  out_acpf_kud <- out_acpf_kud/raster::cellStats(out_acpf_kud, "sum")
+  raster::writeRaster(out_acpf_kud_agg, "./data/movement/space_use/acpf/out_acpf_kud_agg.tif")
   raster::writeRaster(out_acpf_kud, "./data/movement/space_use/acpf/out_acpf_kud.tif")
 
-  ## ACDCPF [4.70 hours]
-  nrow(dplyr::bind_rows(out_acdcpf_s$history))
+  ## ACDCPF [6.857564 hours]
+  length(raster::Which(out_acdcpf_pou > 0, cells = TRUE, na.rm = TRUE)) * 100
+  out_acdcpf_pou_agg <- raster::aggregate(out_acdcpf_pou, fact = 4)
+  out_acdcpf_pou_agg <- out_acdcpf_pou_agg/raster::cellStats(out_acdcpf_pou_agg, "sum")
+  length(raster::Which(out_acdcpf_pou_agg > 0, cells = TRUE, na.rm = TRUE)) * 100
   t1 <- Sys.time()
-  out_acdcpf_kud <- pf_kud_2(xpf = out_acdcpf_s,
-                             # sample_size = 100L,
-                             bathy = site_bathy,
-                             estimate_ud = kud_around_coastline,
-                             grid = site_habitat_lr,
-                             mask = site_bathy
-  )
+  out_acdcpf_kud_agg <-
+    pf_kud(out_acdcpf_pou_agg,
+           estimate_ud = flapper::kud_around_coastline,
+           sample_size = 100,
+           # trial_cells = list(10, 1000, 10000),
+           grid = site_habitat_lr)
   t2 <- Sys.time()
   difftime(t2, t1)
+  raster::cellStats(out_acdcpf_kud_agg, "sum")
+  out_acdcpf_kud <- raster::resample(out_acdcpf_kud_agg, site_bathy)
+  out_acdcpf_kud <- raster::mask(out_acdcpf_kud, site_bathy)
+  raster::cellStats(out_acdcpf_kud, "sum")
+  out_acdcpf_kud <- out_acdcpf_kud/raster::cellStats(out_acdcpf_kud, "sum")
+  raster::writeRaster(out_acdcpf_kud_agg, "./data/movement/space_use/acdcpf/out_acdcpf_kud_agg.tif")
   raster::writeRaster(out_acdcpf_kud, "./data/movement/space_use/acdcpf/out_acdcpf_kud.tif")
 
 } else {
@@ -593,36 +567,39 @@ if(run){
 ######################################
 #### Visualise maps of space use
 
-#### Process POU layers
-# [Not currently implemented for consistency across all plots]
-# Set zero areas to NA (white) so that they stand out more clearly
-out_acpf_pou_2 <- out_acpf_pou
-# out_acpf_pou_2[out_acpf_pou_2 == 0] <- NA
-out_acdcpf_pou_2 <- out_acdcpf_pou
-# out_acdcpf_pou_2[out_acdcpf_pou_2 == 0] <- NA
-
 #### POU maps
-# Note the appearence of artefacts for the ACPF POU map; these are highlighted manually.
+# Note the appearance of artefacts for the ACPF POU map; these are highlighted manually.
 png("./fig/space_use/pou_maps.png",
-    height = 4, width = 8, res = 600, units = "in")
-pp <- par(mfrow = c(1, 2), oma = c(0, 0, 0, 4), mar = c(1, 2, 1, 2))
-
+    height = 4, width = 9, res = 600, units = "in")
+pp <- par(mfrow = c(1, 2), oma = c(0, 0, 0, 5), mar = c(0, 3, 1, 2.5))
+# ACPF
 legend_param <- list(smallplot = c(0.88, 0.92, 0.27, 0.77),
                      axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.25)
                      )
-prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acpf_pou_2), legend_param),
+legend_param$axis.args$at <- seq(0, 1.2e-5, length.out = 5)
+legend_param$axis.args$labels <-
+  prettyGraphics::sci_notation(legend_param$axis.args$at, digits = 1)
+prettyGraphics::pretty_map(add_rasters =
+                             rlist::list.merge(list(x = white_out(out_acpf_pou)), legend_param),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 points(moorings_xy, pch = 21, bg = "black", cex = 0.5)
 add_map_elements()
+add_contour(out_acpf_pou, lwd = 0.1)
 mtext(side = 3, bquote(bold(.("A")) ~ "(ACPF)"), adj = 0.05, line = -2, cex = 1.25)
-prettyGraphics::pretty_map(add_rasters = rlist::list.merge(list(x = out_acdcpf_pou_2), legend_param),
+# ACDCPF
+legend_param$axis.args$at <- seq(0, 2e-5, length.out = 5)
+legend_param$axis.args$labels <-
+  prettyGraphics::sci_notation(legend_param$axis.args$at, digits = 1)
+prettyGraphics::pretty_map(add_rasters =
+                             rlist::list.merge(list(x = white_out(out_acdcpf_pou)), legend_param),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 mtext(side = 3, bquote(bold(.("B")) ~ "(ACDCPF)"), adj = 0.05, line = -2, cex = 1.25)
-mtext(side = 4, "POU", line = 3.75, cex = 1.25)
+mtext(side = 4, "POU", line = 6, cex = 1.25)
 points(moorings_xy, pch = 21, bg = "black", cex = 0.5)
 add_map_elements()
+add_contour(out_acdcpf_pou, lwd = 0.1)
 par(pp)
 dev.off()
 
@@ -656,25 +633,27 @@ dev.off()
 png("./fig/space_use/out_acpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
 out_acpf_kud_scaled_to_one <- out_acpf_kud/raster::cellStats(out_acpf_kud, "max")
-prettyGraphics::pretty_map(add_rasters = list(x = out_acpf_kud_scaled_to_one,
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acpf_kud_scaled_to_one),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
+add_contour(out_acpf_kud_scaled_to_one)
 add_map_elements()
 dev.off()
 ## ACDCPF
 png("./fig/space_use/out_acdcpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
 out_acdcpf_kud_scaled_to_one <- out_acdcpf_kud/raster::cellStats(out_acdcpf_kud, "max")
-prettyGraphics::pretty_map(add_rasters = list(x = out_acdcpf_kud_scaled_to_one,
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acdcpf_kud_scaled_to_one),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 add_map_elements()
+add_contour(out_acdcpf_kud_scaled_to_one)
 dev.off()
 
 

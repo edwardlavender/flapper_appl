@@ -4,7 +4,7 @@
 
 #### This code:
 # 1) Evaluates the use of Euclidean distances as an approximation
-# ... of shortest distances, as movement scales relavent to flapper skate
+# ... of shortest distances, as movement scales relevant to flapper skate
 # ... (given their assumed mobility), within the study area.
 
 #### Steps preceding this code:
@@ -53,105 +53,158 @@ mob                <- 500
 # For n_max = 10,000  without parallelisation this takes ~2.07 mins
 # For n_max = 100,000 without parallelisation this takes ~13.41 minutes
 run <- FALSE
+n_trial <- 20
 if(run){
-  set.seed(1)
-  out <- lcp_comp(surface = site_bathy,
-                  barrier = site_coast_barrier,
-                  mobility = mob,
-                  n = 10000, n_max = 100000,
-                  graph = site_bathy_graph)
-  saveRDS(out, "./data/spatial/lcp_comp.rds")
-} else out <- readRDS("./data/spatial/lcp_comp.rds")
-
+  out <-
+    pbapply::pblapply(1:n_trial, cl = 5L, function(i){
+    set.seed(i)
+    out <- lcp_comp(surface = site_bathy,
+                    barrier = site_coast_barrier,
+                    mobility = mob,
+                    n = 10000, n_max = 50000,
+                    graph = site_bathy_graph)
+    saveRDS(out, paste0("./data/spatial/lcp_comp_", i, ".rds"))
+    return(out)
+  })
+  beepr::beep(10L)
+} else {
+  out <- lapply(1:n_trial, function(i){
+    readRDS(paste0("./data/spatial/lcp_comp_", i, ".rds"))
+  })
+}
 
 #### Process results
-# Drop pairs for which we could not calculate LCPs
-nrow(out)
-out <- out %>% dplyr::filter(!is.na(.data$dist_lcp))
-nrow(out)
+## Implement initial processing
+out <-
+  out %>%
+  dplyr::bind_rows() %>%
+  # Drop pairs for which we could not calculate LCPs
+  dplyr::filter(!is.na(.data$dist_lcp)) %>%
+  # Drop duplicate samples
+  dplyr::mutate(key = paste0(cell_id0, cell_id1)) %>%
+  dplyr::filter(!duplicated(key))
+## Drop samples from within the barrier
+# ... (resulting from a slight discrepancy between site_bathy and site_coast at the edges)
+# Cell one
+xy <- sp::SpatialPoints(out[, c("cell_x0", "cell_y0")],
+                          proj4string = raster::crs(site_coast))
+xy_over <- sp::over(xy, site_coast)
+xy_bool <- !is.na(xy_over)
+xy_sums <- rowSums(xy_bool, na.rm = TRUE)
+xy_pos    <- which(xy_sums > 1)
+xy_over[xy_pos, ]
+check <- FALSE
+if(check){
+  for(i in 1:length(xy_pos)){
+    # i <- 1
+    xy_i <- xy[xy_pos[i], , drop = FALSE]
+    xy_i <- sp::coordinates(xy_i)
+    adj <- 100
+    raster::plot(site_coast,
+                 xlim = c(plyr::round_any(xy_i[1], adj, floor), plyr::round_any(xy_i[1], adj, ceiling)),
+                 ylim = c(plyr::round_any(xy_i[2], adj, floor), plyr::round_any(xy_i[2], adj, ceiling)),
+                 col = "lightgreen", border = "lightgreen",
+                 main = i)
+    axis(side = 1); axis(side = 2)
+    points(xy[xy_pos[i], ], lwd = 5, col = "red")
+    readline(prompt = "Press [Enter] to continue...")
+  }
+}
+out <- out[-xy_pos, ]
+# Cell two
+xy <- sp::SpatialPoints(out[, c("cell_x1", "cell_y1")],
+                        proj4string = raster::crs(site_coast))
+xy_over <- sp::over(xy, site_coast)
+xy_bool <- !is.na(xy_over)
+xy_sums <- rowSums(xy_bool, na.rm = TRUE)
+xy_pos  <- which(xy_sums > 1)
+xy_over[xy_pos, ]
+out <- out[-xy_pos, ]
 
 #### Examine results
 head(out)
 table(out$barrier)
+pos   <- which.min(out$dist_euclid[out$barrier == 1L])
+trans <- out[out$barrier == 1L, ][pos, ]
+raster::plot(site_coast,
+             xlim = range(trans[, c("cell_x0", "cell_x1")]),
+             ylim = range(trans[, c("cell_y0", "cell_y1")]))
+raster::plot(site_bathy, add = TRUE)
+raster::lines(site_coast)
+lines(out[out$barrier == 1L, c("cell_x0", "cell_x1")][pos, ],
+      out[out$barrier == 1L, c("cell_y0", "cell_y1")][pos, ],
+      col = "red", lwd = 10)
+head(sort(out$dist_euclid[out$barrier == 1L]))
+quantile(out$dist_euclid[out$barrier == 1L], 0.01)
+as.character(quantile(out$dist_euclid[out$barrier == 1L], 0.05))
 
 #### Visualise sampled locations on map
-raster::plot(site_bathy)
-raster::lines(site_coast)
-invisible(lapply(split(out, seq_len(nrow(out))), function(d){
-  arrows(x0 = d$cell_x0, y0 = d$cell_y0,
-         x1 = d$cell_x1, y1 = d$cell_y1, length = 0.01, lwd = 1)
-}))
+map <- FALSE
+if(map){
+  raster::plot(site_bathy)
+  raster::lines(site_coast)
+  invisible(lapply(split(out, seq_len(nrow(out))), function(d){
+    arrows(x0 = d$cell_x0, y0 = d$cell_y0,
+           x1 = d$cell_x1, y1 = d$cell_y1, length = 0.01, lwd = 1)
+  }))
+}
+
+#### Model
+mod <- lm(dist_lcp ~ 0 + dist_euclid:barrier, data = out)
+summary(mod)
+coef(mod)
+summary(mod)[["r.squared"]] * 100
+
 
 #### Compare Euclidean and shortest distances
+
 # Extract the data for the paths that do not versus do cross a barrier
 out_barrier0 <- out[out$barrier == 0, ]
 out_barrier1 <- out[out$barrier == 1, ]
-# Set up plotting window
-pp <- graphics::par(mfrow = c(1, 2), oma = c(3, 3, 3, 3), mar = c(4, 4, 4, 4))
+
+# Set up plot
+png("./fig/study_site/lcp_comp.png",
+    height = 4, width = 8, units = "in", res = 600)
+pp <- par(mfrow = c(1, 2), oma = c(2, 2, 1, 1), mar = c(2, 2, 2, 2))
+
 # Results for paths that do not cross a barrier
-# ... Visualisation
 prettyGraphics::pretty_plot(out_barrier0$dist_euclid, out_barrier0$dist_lcp,
-                            xlab = "Distance (Euclidean) [m]",
-                            ylab = "Distance (shortest) [m]",
-                            pch = ".")
-graphics::abline(0, 1, col = "red")
-graphics::abline(h = mob, col = "royalblue", lty = 3)
-# ... Euclidean distance parameter at which mobility is exceeded
-limit0 <- min(out_barrier0$dist_euclid[out_barrier0$dist_lcp > mob]); limit0
-graphics::abline(v = limit0, col = "royalblue", lty = 3)
+                            xlab = "", ylab = "",
+                            pch = ".",
+                            col = scales::alpha("grey", 0.75))
+x <- seq(0, 500)
+nd <- data.frame(barrier = factor(0, levels = c(0, 1)), dist_euclid = x)
+ci <- prettyGraphics::list_CIs(predict(mod, nd, se.fit = TRUE))
+prettyGraphics::add_error_envelope(x, ci,
+                                   add_fit = list(col = "royalblue", lwd = 3))
+mtext(side = 3, "A", font = 2, adj = 0, cex = 1.2)
+
 # Results for paths that cross a barrier
-# ... Visualisation
 prettyGraphics::pretty_plot(out_barrier1$dist_euclid, out_barrier1$dist_lcp,
-                            xlab = "Distance (Euclidean) [m]",
-                            ylab = "Distance (shortest) [m]",
-                            pch = ".")
-graphics::abline(0, 1, col = "red")
-graphics::abline(h = mob, col = "royalblue", lty = 3)
-# ... Euclidean distance parameter at which mobility is exceeded
-# ... ... (This is lower than for paths that do not cross a barrier)
-limit1 <- min(out_barrier1$dist_euclid[out_barrier1$dist_lcp > mob], na.rm = TRUE); limit1
-graphics::abline(v = limit1, col = "royalblue", lty = 3)
-graphics::par(pp)
+                            xlab = "", ylab = "",
+                            pch = ".",
+                            col = scales::alpha("grey", 0.75),
+                            add_fit = list(col = "royalblue", lwd = 2))
+nd$barrier <- factor(1, levels = c(0, 1))
+ci <- prettyGraphics::list_CIs(predict(mod, nd, se.fit = TRUE))
+prettyGraphics::add_error_envelope(x, ci,
+                                   add_fit = list(col = "royalblue", lwd = 3))
+mtext(side = 3, "B", font = 2, adj = 0, cex = 1.2)
 
-#### Visualise how % connections with shortest distances less than mobility
-# ... declines with Euclidean distance
+mtext(side = 1, "Euclidean distance (m)", outer = TRUE, line = 0)
+mtext(side = 2, "Shortest distance (m)", outer = TRUE, line = 0.75)
+par(pp)
+dev.off()
 
-## Derive quantiles
-out_barrier_for_quants <- out_barrier1 # out_barrier0
-quantiles <-
-  data.frame(distance = seq(min(out_barrier_for_quants$dist_euclid), 500, length.out = 10000),
-             prop = NA)
-for(i in seq_len(nrow(quantiles))){
-  # i = 1
-  tmp <- out_barrier_for_quants[out_barrier_for_quants$dist_euclid <= quantiles$distance[i], ]
-  prop <- (length(which(tmp$dist_lcp <= mob)))/nrow(tmp)
-  quantiles$prop[i] <- prop
+# Define predictive model based on this analysis
+as.character(coef(mod)[1])
+as.character(coef(mod)[2])
+lcp_predict <- function(distance, barrier){
+  1.06450396994437 * distance * (barrier == 0) +
+    1.17288343596087 * distance * (barrier == 1)
 }
-
-## Examine 95 percentiles
-# ... 95 % of connections less than this Euclidean distance
-# ... remained below mobility in terms of shortest distance:
-q95 <- quantiles$distance[which.min(quantiles$prop - 0.95 > 0)]
-q95
-
-## Examine the tail of the distribution
-tail(quantiles)
-min(quantiles$prop)
-
-## Visualise distribtion
-axis_ls <- prettyGraphics::pretty_plot(quantiles$distance, quantiles$prop,
-                            pretty_axis_args = list(control_digits = 2),
-                            type = "l",
-                            xlab = "Distance (Euclidean) [m]",
-                            ylab = "Proportion",
-                            lwd = 2)
-xlim <- axis_ls[[1]]$lim
-ylim <- axis_ls[[2]]$lim
-lines(xlim, c(0.95, 0.95), col = "royalblue", lty = 3, lwd = 2)
-lines(c(q95, q95), ylim, col = "royalblue", lty = 3, lwd = 2)
 
 
 #### End of code.
 ######################################
 ######################################
-

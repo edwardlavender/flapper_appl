@@ -176,15 +176,12 @@ det_centroids_overlaps <-
 #### Define detection kernels (as in examine_space_use.R)
 run <- FALSE
 if(run){
-  site_sea <- invert_poly(site_coast)
   det_kernels <- acs_setup_detection_kernels(xy = moorings_xy,
                                              services = NULL,
                                              centroids = det_centroids,
                                              overlaps = det_centroids_overlaps,
                                              calc_detection_pr = calc_dpr,
-                                             map = site_bathy,
-                                             coastline = site_sea,
-                                             boundaries = raster::extent(site_bathy))
+                                             bathy = site_bathy)
   saveRDS(det_kernels, "./data/movement/cooccurrences/det_kernels.rds")
 } else det_kernels <- readRDS("./data/movement/cooccurrences/det_kernels.rds")
 
@@ -210,7 +207,7 @@ acoustics$index <- 1:nrow(acoustics)
 
 #### Implement the ACDC algorithm (for the selected individual)
 # This takes ~20 s on one core for the selected time series.
-run <- FALSE
+run <- TRUE
 if(run){
   out_acdc <- acdc(acoustics = acoustics,
                    archival = archival,
@@ -242,7 +239,7 @@ pf_data$state[nrow(pf_data)] <- 1
 
 #### Implement ACDCPF algorithm
 # This takes ~ 25 minutes per individual.
-run <- FALSE
+run <- TRUE
 if(run){
   sink(paste0("./data/movement/cooccurrences/", id, "/acdcpf/rgass_log.txt"))
   pf_opts <- pf_setup_optimisers(use_calc_distance_euclid_backend_grass = TRUE,
@@ -266,13 +263,11 @@ if(run){
 #### Build paths
 
 #### Build paths (as in examine_post_release_paths.R)
-# This takes 0.55 minutes for ID 1.
+# This takes 0.83 minutes for ID 1.
 # This takes 0.42 minutes for ID 2.
-run_pf_simplify <- FALSE
+run_pf_simplify <- TRUE
 if(run_pf_simplify){
   out_pf_paths <- pf_simplify(archive = out_acdcpf,
-                              cl = parallel::makeCluster(4L),
-                              varlist = "mobility",
                               return = "path",
                               max_n_paths = 1000L)
   saveRDS(out_pf_paths, paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_pf_paths.rds"))
@@ -287,9 +282,9 @@ if(run_pf_simplify){
 max(out_pf_paths$path_id)
 
 #### Check distances using LCPs (as in examine_post_release_paths.R)
-# This takes 1.55 minutes for ID 1 with 1,000 paths
+# This takes 1.63 minutes for ID 1 with 1,000 paths
 # This takes 1.88 minutes for ID 2 with 1,000 paths
-run_lcp_interp <- FALSE
+run_lcp_interp <- TRUE
 if(run_lcp_interp){
   out_pf_lcps <- lcp_interp(paths = out_pf_paths, surface = site_bathy)
   saveRDS(out_pf_lcps,  paste0("./data/movement/cooccurrences/", id, "/acdcpf/out_pf_lcps.rds"))
@@ -303,7 +298,7 @@ head(out_pf_lcps$dist_lcp)
 out_pf_paths$dist_lcp <- out_pf_lcps$dist_lcp$dist
 
 #### Process paths in line with LCPs (similar to in examine_post_release_paths.R)
-run_process_paths <- FALSE
+run_process_paths <- TRUE
 if(run_process_paths){
   ## Examine distances
   range(out_pf_paths$dist, na.rm = TRUE)

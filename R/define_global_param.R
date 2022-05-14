@@ -52,6 +52,20 @@ add_map_elements <- function(){
                    xy = c(712000, 6247000),
                    lonlat = FALSE)
 }
+## Raster contours
+add_contour <-
+  function(x, p = 0.5, ext = NULL, lwd = 0.5,...){
+    if(!is.null(ext)) x <- raster::crop(x, ext)
+    x <- spatialEco::raster.vol(x, p = p, sample = FALSE)
+    raster::contour(x, nlevels = 1, drawlabels = FALSE, add = TRUE, lwd = lwd,...)
+    return(invisible())
+  }
+## White out zeros
+white_out <- function(x){
+  if(is.null(x)) return(NULL)
+  x[x == 0] <- NA
+  return(x)
+}
 
 
 ######################################
@@ -103,19 +117,11 @@ mobility             <- 500
 mobility_from_origin <- mobility * 2
 
 #### Euclidean-distance threshold (from examine_lcps.R)
-euclid_distance_limit         <- 481
-euclid_distance_barrier_limit <- 421
-# These parameters support particle processing routines, by
-# ... restricting the number of LCP calculations that are required.
-# ... For distances 421-481, we will check barrier overlaps
-# ... and for the subset of cell pairs that overlap with the coastline
-# ... we will calculate LCPs.
-# ... We will calculate LCPs for all cell connections exceeding 481 m
-# ... in Euclidean distances.
-# ... Thus, all distances less than 421 m and distances between 421--481 m
-# ... are assumed to be less than mobility. LCPs are only calculated for the
-# ... remaining cell pairs.
-
+euclid_distance_barrier_limit <- 265
+lcp_predict <- function(distance, barrier){
+  1.06450396994437 * distance * (barrier == 0) +
+    1.17288343596087 * distance * (barrier == 1)
+}
 
 ######################################
 ######################################
