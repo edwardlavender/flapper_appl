@@ -20,10 +20,12 @@ rm(list = ls())
 #### Essential packages
 library(flapper)
 
-
 ######################################
 ######################################
 #### Spatial parameters
+
+#### Thesis or manuscript colour scheme
+use_man_scheme <- TRUE
 
 #### Define projections
 proj_wgs84 <- sp::CRS("+init=epsg:4326")
@@ -31,9 +33,16 @@ proj_utm <- sp::CRS("+proj=utm +zone=29 +datum=WGS84 +units=m +no_defs")
 
 #### Plotting param
 ## Coastline
-add_coast <- list(x = readRDS("./data/spatial/site_coast.rds"),
-                  col = "dimgrey", # scales::alpha("dimgrey", 0.85),
-                  border = "dimgrey")
+if(use_man_scheme){
+  add_coast <- list(x = readRDS("./data/spatial/site_coast.rds"),
+                    col = "dimgrey",
+                    border = "dimgrey")
+} else {
+  add_coast <- list(x = readRDS("./data/spatial/site_coast.rds"),
+                    col = "#f1f4c7",
+                    border = "#bdbf97")
+}
+
 ## Bathymetry parameters
 bathy_zlim <- c(0, 225)
 bathy_col_param <- prettyGraphics::pretty_cols_brewer(bathy_zlim,
