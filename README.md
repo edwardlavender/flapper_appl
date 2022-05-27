@@ -16,6 +16,11 @@ Modelling, University of St Andrews, Scotland
 state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
+<img src="README_banner_1.png"/>
+
+*Figure 1. A flapper skate (*Dipturus intermedius*). Photograph courtesy
+of the Movement Ecology of Flapper Skate project.*
+
 ## Introduction
 
 The `flapper` family of algorithms is a suite of mechanistic approaches
@@ -30,8 +35,8 @@ Flapper Skate (MEFS) project in 2016–17. Four analyses are implemented:
   - **A1: Depth use.** The depth-contour (DC) algorithm is used to
     examine the depth use of a selected individual over a one-month
     period in the MPA.
-  - **A2: Space use.** The mean-position, acoustic-centroid particle
-    filtering (ACPF) and acoustic-centroid depth-contour particle
+  - **A2: Space use.** The mean-position, acoustic-container particle
+    filtering (ACPF) and acoustic-container depth-contour particle
     filtering (ACDCPF) algorithms are used to reconstruct patterns of
     space use for a selected individual over a one-month period in the
     MPA.
@@ -45,10 +50,17 @@ Flapper Skate (MEFS) project in 2016–17. Four analyses are implemented:
     cooccurring detections to examine evidence for close-knit
     interactions versus fine-scale spatial partitioning.
 
-<img src="README_banner.png"/>
+<img src="README_banner_2.png"/>
 
-*Figure 1. A flapper skate (*Dipturus intermedius*). Photograph courtesy
-of the Movement Ecology of Flapper Skate project.*
+*Figure 2. Example outputs from the `flapper_appl` project showing
+reconstructed movement paths of a selected flapper skate following
+catch-and-release angling in the Loch Sunart to the Sound of Jura Marine
+Protected Area. The background shows the bathymetry (in blue), the
+individual’s release location (in black) and selected paths over an
+80-minute period. The reconstructed paths all indicate that the
+individual descended into a deep-water channel following angling, before
+rapidly re-ascending via one of two routes into the shallow water around
+a small island.*
 
 ## Prerequisites
 
@@ -81,13 +93,13 @@ used on a few occasions.
       - `spatial/` contains spatial data for the study area:
           - `bathy/` contains a 5 x 5 m bathymetry raster (named
             `bathy_res_full_ext_full_abs.tif`), sourced from Howe et
-            al. (2015);
+            al. (2014);
           - `coastline/` contains a 1:10,000 coastline layer (named
             `westminster_const_region.shp`) from
             [Digimap](https://digimap.edina.ac.uk);
           - `sediments/` contains a map of sediment types (named
             `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et
-            al. (2015) and Boswarva et al. (2018);
+            al. (2014) and Boswarva et al. (2018);
       - `process_data_raw.R` processes raw data as required for each
         analysis.
 
@@ -95,6 +107,30 @@ used on a few occasions.
     
       - `movement/`contains processed movement time series (from
         `process_data_raw.R`) and analysis-specific algorithm outputs;
+      - `skate/` contains skate datasets, copied from `movement/` for
+        publication in this repository:
+          - `A1-2` contains skate datasets required for A1 and A2:
+              - `moorings.rds` contains passive acoustic telemetry
+                deployment information (copied from
+                `movement/generic/`);
+              - `moorings_xy.rds` contains receiver deployment locations
+                (copied from `spatial/`);
+              - `acoustics_eg.rds` is the example acoustic time series
+                (copied from `movement/tag/`);
+              - `archival_eg.rds` is the example archival time series
+                (copied from `movement/tag/`);
+          - `A3` contains skate datasets required for A3 (copied from
+            `movement/post_release_paths/`):
+              - `1507/` contains the data for individual 1507, including
+                the release location (`xy_release.rds`) and the
+                post-release time series (`archival_pr.rds`);
+              - `1558/` contains the same datasets for individual 1558;
+          - `A4` contains skate datasets required for A4 (copied from
+            `movement/cooccurrences/`):
+              - `acc_1.rds` and `arc_2.rds` contain the acoustic time
+                series for individuals 542 and 560 respectively;
+              - `arc_1.rds` and `arc_2.rds` contain the archival time
+                series for the same individuals;
       - `spatial/` contains processed spatial data (from
         `process_data_raw.R`);
       - `tmp/` stores temporary files;
@@ -114,8 +150,8 @@ used on a few occasions.
 
 4.  `fig/` contains figures.
 
-Note that `data-raw/`, `data/` and `fig/` are not included in the online
-version of this repository.
+Note that `data-raw/`, `data/*` (except `data/skate/`) and `fig/` are
+not included in the online version of this repository.
 
 ## Workflow
 
@@ -124,33 +160,43 @@ version of this repository.
     the `R Project`, including the directory system (as outlined above
     and in the `R` scripts). It is desirable to initiate the project on
     a system with a capacity of at least 4 TB (e.g., an external hard
-    drive) as some routines generate large numbers of files. Obtain and
-    process the raw data (via `process_data_raw.R`).
+    drive) as some routines generate large numbers of files.
 
-2.  **Define global parameters.** Define global parameters via
+2.  **Data availability.** Spatial and movement data need to be obtained
+    and processed. Unfortunately, this repository cannot be published
+    with all the spatial and movement data required to implement the
+    project due to third party restrictions. However, the spatial
+    datasets can be accessed via the references provided above and
+    processed via `process_data_raw.R`. The raw movement data were
+    collected by NatureScot and Marine Scotland Science and made
+    available for this study by these organisations. Requests to access
+    these data from NatureScot and Marine Scotland Science can be
+    facilitated. In the meantime, the processed skate data (from
+    `process_data_raw.R`) required to run `R` scripts are archived in
+    the `data/skate/` directory. These can be manually copied into the
+    directory system defined above to run `R` scripts.
+
+3.  **Define global parameters.** Define global parameters via
     `define_global_param.R` and study area fields via
     `define_study_area_fields.R`.
 
-3.  **Implement algorithms.** Implement A1–4 via `examine_depth_use.R`,
+4.  **Implement algorithms.** Implement A1–4 via `examine_depth_use.R`,
     `examine_space_use.R` (together with
     `examine_space_use_time_trials.R`, `examine_lcps.R` and
     `examine_habitat_preferences.R`), `examine_post_release_paths.R` and
     `examine_cooccurrences.R` respectively.
 
-4.  **Examine results.** Examine reconstructed patterns of depth and
+5.  **Examine results.** Examine reconstructed patterns of depth and
     space use and their implications in analyses of habitat preferences;
-    post-release movement paths and fine-scale spatial partitioning
+    post-release movement paths; and fine-scale spatial partitioning
     during periods of cooccurring detections for the selected
     individuals.
 
 <img src="README_img.png"/>
 
-*Figure 1. Example outputs of the `flapper_appl` project showing
-reconstructed movement paths from a selected flapper skate following
-catch-and-release angling in the Loch Sunart to the Sound of Jura Marine
-Protected Area. The background shows landmasses (in grey) and the
-bathymetry (m) (in blue), the individual’s release location (in black)
-and selected paths over an 80-minute period (purple–yellow).*
+*Figure 3. Example outputs of the `flapper_appl` project showing the
+most likely reconstructed path (from Figure 2) over an 80-minute period
+(purple–yellow).*
 
 ## References
 
@@ -159,7 +205,7 @@ high-resolution acoustic data; a predictive habitat map for the Firth of
 Lorn, Scotland. Continental Shelf Research, 168, 39–47.
 <https://doi.org/10.1016/j.csr.2018.09.005>
 
-Howe et al. (2015). The seabed geomorphology and geological structure of
+Howe et al. (2014). The seabed geomorphology and geological structure of
 the Firth of Lorn, western Scotland, UK, as revealed by multibeam
 echo-sounder survey. Earth and Environmental Science Transactions of the
 Royal Society of Edinburgh, 105(4), 273–284.
