@@ -275,7 +275,7 @@ if(run){
                cl = cl, varlist = "det_kernels"
   )
   saveRDS(out_ac, "./data/movement/space_use/ac/out_ac.rds")
-  out_ac_s <- acdc_simplify(out_ac, mask = site_bathy)
+  out_ac_s <- acdc_simplify(out_ac, mask = site_bathy, normalisation = FALSE) #  (normalisation = FALSE for legacy reasons)
   saveRDS(out_ac_s, "./data/movement/space_use/ac/out_ac_s.rds")
   raster::writeRaster(out_ac_s$map, "./data/movement/space_use/ac/out_ac_map.tif")
   raster::removeTmpFiles(h = 0)
@@ -308,7 +308,7 @@ if(run){
                    con = "./data/movement/space_use/acdc/",
                    cl = cl, varlist = "det_kernels")
   saveRDS(out_acdc, "./data/movement/space_use/acdc/out_acdc.rds")
-  out_acdc_s <- acdc_simplify(out_acdc, mask = site_bathy)
+  out_acdc_s <- acdc_simplify(out_acdc, mask = site_bathy, normalisation = FALSE) # (normalisation = FALSE for legacy reasons)
   saveRDS(out_acdc_s, "./data/movement/space_use/acdc/out_acdc_s.rds")
   raster::writeRaster(out_acdc_s$map, "./data/movement/space_use/acdc/out_acdc_map.tif")
   raster::removeTmpFiles(h = 0)

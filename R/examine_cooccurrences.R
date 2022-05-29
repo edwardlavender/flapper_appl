@@ -230,7 +230,7 @@ if(run){
 #### Implement PF
 
 #### Define data for PF
-pf_data <- acdc_access_dat(acdc_simplify(out_acdc))
+pf_data <- acdc_access_dat(acdc_simplify(out_acdc, normalisation = FALSE)) # legacy normalisation = FALSE
 pf_data$depth   <- pf_data$archival_depth
 pf_data$va      <- Tools4ETS::serial_difference(pf_data$depth)
 pf_data$va_abs  <- abs(pf_data$va)

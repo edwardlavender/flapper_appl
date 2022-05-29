@@ -62,7 +62,8 @@ if(run_dc){
 run_dc_processing <- FALSE
 if(run_dc_processing){
   #### Process out_dc
-  out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy)
+  # (normalisation implemented below & set to false here for legacy reasons)
+  out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy, normalise = FALSE)
 
   #### Check availability of depth contours at each time step [all TRUE]
   out_dc_dat <- acdc_access_dat(out_dc_s)

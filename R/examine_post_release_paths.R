@@ -155,7 +155,8 @@ if(run_dc){
 
 
 #### Process out_dc and check availability of depth contours at each time step
-out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy)
+# (normalisation = FALSE for legacy reasons)
+out_dc_s <- acdc_simplify(out_dc, type = "dc", mask = site_bathy, normalisation = FALSE)
 out_dc_dat <- acdc_access_dat(out_dc_s)
 table(out_dc_dat$availability)
 
