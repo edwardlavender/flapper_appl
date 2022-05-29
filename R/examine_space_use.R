@@ -227,16 +227,16 @@ moorings          <- moorings[moorings$overlap, ]
 moorings_xy       <- moorings_xy[which(moorings_xy$receiver_id %in% moorings$receiver_id), ]
 moorings$receiver_id == moorings_xy$receiver_id
 
-#### Define detection centroids
-det_centroids <- acs_setup_centroids(moorings_xy,
+#### Define detection containers
+det_containers <- acs_setup_containers(moorings_xy,
                                      detection_range = detection_range,
                                      coastline = site_coast,
                                      boundaries = raster::extent(site_bathy),
                                      plot = TRUE)
 
-#### Define detection centroid overlaps
-det_centroids_overlaps <-
-  get_detection_centroids_overlap(centroids = do.call(raster::bind, plyr::compact(det_centroids)),
+#### Define detection container overlaps
+det_containers_overlaps <-
+  get_detection_containers_overlap(containers = do.call(raster::bind, plyr::compact(det_containers)),
                                   services = NULL)
 
 #### Define detection kernels
@@ -245,8 +245,8 @@ if(run){
   site_sea <- invert_poly(site_coast)
   det_kernels <- acs_setup_detection_kernels(xy = moorings_xy,
                                              services = NULL,
-                                             centroids = det_centroids,
-                                             overlaps = det_centroids_overlaps,
+                                             containers = det_containers,
+                                             overlaps = det_containers_overlaps,
                                              calc_detection_pr = calc_dpr,
                                              bathy = site_bathy)
   saveRDS(det_kernels, "./data/movement/space_use/det_kernels.rds")
@@ -264,9 +264,9 @@ if(run){
   out_ac <- ac(acoustics = acoustics, # acoustics[1:3, ],
                step = 120,
                bathy = site_bathy,
-               detection_centroids = det_centroids,
+               detection_containers = det_containers,
                detection_kernels = det_kernels,
-               detection_kernels_overlap = det_centroids_overlaps,
+               detection_kernels_overlap = det_containers_overlaps,
                normalise = TRUE,
                mobility = mobility,
                write_record_spatial_for_pf =
@@ -297,9 +297,9 @@ if(run){
   out_acdc <- acdc(acoustics = acoustics, # acoustics[1:3, ],
                    archival = archival,
                    bathy = site_bathy,
-                   detection_centroids = det_centroids,
+                   detection_containers = det_containers,
                    detection_kernels = det_kernels,
-                   detection_kernels_overlap = det_centroids_overlaps,
+                   detection_kernels_overlap = det_containers_overlaps,
                    normalise = TRUE,
                    mobility = mobility,
                    calc_depth_error = calc_depth_error,
@@ -620,11 +620,11 @@ text(rxy[, 1], rxy[, 2], labels = moorings_xy$receiver_id, pch = 4)
 table(acoustics$receiver_id)
 #  3   30    36   37
 # 533 3224   36  269
-## Add receiver centroids
-centroids   <- rgeos::gBuffer(moorings_xy, width = detection_range, byid = TRUE)
-centroids_2 <- rgeos::gBuffer(moorings_xy, width = 500, byid = TRUE)
-raster::lines(centroids)
-raster::lines(centroids_2, col = "blue")
+## Add receiver containers
+containers   <- rgeos::gBuffer(moorings_xy, width = detection_range, byid = TRUE)
+containers_2 <- rgeos::gBuffer(moorings_xy, width = 500, byid = TRUE)
+raster::lines(containers)
+raster::lines(containers_2, col = "blue")
 ## Save
 dev.off()
 
