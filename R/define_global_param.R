@@ -19,6 +19,8 @@ rm(list = ls())
 
 #### Essential packages
 library(flapper)
+library(prettyGraphics)
+
 
 ######################################
 ######################################
@@ -173,6 +175,84 @@ calc_mpr_from_origin <- function(distance, data){
 n_particles <- 1000
 
 
+######################################
+######################################
+#### Visualise parameters/models
+
+png("./fig/models.png", height = 3.5, width = 10,
+    units = "in", res = 600)
+pp <- par(mfrow = c(1, 3), oma = c(1, 1, 1, 4))
+
+#### Detection probability model
+x <- seq(0, detection_range + 1e-6, length.out = 1000)
+pretty_plot(x, calc_dpr(x),
+            xlab = "", ylab = "",
+            ylim = c(0, 1), cex.axis = 1.2,
+            type = "l")
+mtext(side = 1, "Distance from receiver (m)", line = 2.5)
+mtext(side = 2, "Detection probability", line = 2.5)
+mtext(side = 3, "A", font = 2, adj = -0.15, cex = 2, line = 2)
+
+#### Movement model
+# Plot state 0 and state 1 models
+pretty_plot(0:mobility, calc_mpr(0:mobility, data.frame(state = 0)),
+            xlim = c(0, 500), ylim = c(0, 1),
+            xlab = "", ylab = "",
+            col = "grey", lwd = 2, type = "l", cex.axis = 1.3)
+lines(0:mobility, calc_mpr(0:mobility, data.frame(state = 1)), lwd = 2)
+legend("topright", legend = c("Mode 0", "Mode 1"),
+       lwd = 2, col = c("grey", "black"), box.lty = 3)
+mtext(side = 1, "Distance between locations (m)", line = 2.5)
+mtext(side = 2, "Movement probability", line = 2.5)
+mtext(side = 3, "B", font = 2, adj = -0.15, cex = 2, line = 2)
+
+#### Depth error model
+# Define seabed and observed (individual) depths
+depth_seabed  <- 0:max(bathy_zlim)
+depth_ind_adj <- calc_depth_error(depth_seabed)
+depth_ind     <- rbind(depth_seabed + depth_ind_adj[1, ],
+                       depth_seabed + depth_ind_adj[2, ])
+depth_ind[depth_ind < min(depth_seabed)] <- min(depth_seabed)
+depth_ind[depth_ind > max(depth_seabed)] <- max(depth_seabed)
+# Define blank plot
+lim <- range(depth_seabed)
+plot(depth_seabed, depth_ind[1, ] * -1,
+     xlim = lim, ylim = sort(lim *-1),
+     axes = FALSE,
+     xlab = "", ylab = "",
+     type = "n")
+# Add background shading for depths
+for (i in seq_len((length(bathy_col_param$breaks) - 1))) {
+  print(i)
+  shallow <- bathy_col_param$breaks[i]
+  deeper <- bathy_col_param$breaks[i + 1]
+  x <- c(shallow, deeper, deeper, 0, 0, shallow)
+  y <- c(0, 0, deeper, deeper, shallow, shallow)
+  polygon(x, y*-1, col = bathy_col_param$col[i],
+          border = bathy_col_param$col[i])
+}
+# Add depth error envelope
+polygon(c(depth_seabed, rev(depth_seabed)),
+        c( depth_ind[1, ] * -1, rev(depth_ind[2, ] * -1)),
+        border = FALSE,
+        col = scales::alpha("grey", 0.5))
+# Add 1:1 line for comparison
+lines(c(lim[1], lim[2]), c(lim[1], lim[2] * -1), lty = 3)
+# Add axes and titles
+bins <- seq(0, lim[2], by = 50)
+pretty_axis(side = 3:2,
+            lim = list(x = lim, y = sort(lim*-1)),
+            axis = list(list(at = bins),
+                        list(at = sort(bins * -1),
+                             labels = abs(sort(bins * -1)))),
+            control_axis = list(cex.axis = 1.3),
+            add = TRUE)
+mtext(side = 3, "Seabed depth (m)", line = 2.5)
+mtext(side = 2, "Observed (individual) depth (m)", line = 2.5)
+mtext(side = 3, "C", font = 2, adj = -0.15, cex = 2, line = 2)
+
+par(pp)
+dev.off()
 
 #### End of code.
 ######################################
