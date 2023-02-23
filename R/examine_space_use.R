@@ -195,7 +195,8 @@ if(nrow(out_coa) >= 5L){
                            pch = 21, col = scales::alpha("brown", 0.5)),
                       list(x = out_coa, pch = 4, col = "red", cex = 1.5, lwd = 0.5)
     ),
-    pretty_axis_args = paa
+    pretty_axis_args = paa,
+    crop_spatial = TRUE
   )
   add_contour(out_coa_kud)
   legend(x = 701700, y = 6248700,
