@@ -35,6 +35,9 @@ site_bathy      <- raster::raster("./data/spatial/site_bathy.tif")
 site_coast      <- readRDS("./data/spatial/site_coast.rds")
 # Lower resolution 'site habitat' layer for faster KUD estimation with large particle samples
 site_habitat_lr <- readRDS("./data/spatial/site_habitat_lr.rds")
+# KUD scaling
+# ... Based on values previously derived from this script
+param_scale <- max(sapply(list.files("./data/movement/space_use/max", full.names = TRUE), readRDS))
 
 #### Process acoustic and archival time stamps
 # Processing implemented in process_data_raw.R
@@ -172,15 +175,17 @@ if(nrow(out_coa) >= 5L){
     out_coa_kud <- out_coa_kud/raster::cellStats(out_coa_kud, "sum")
     raster::cellStats(out_coa_kud, "sum")
     # out_coa_kud <- out_coa_kud/raster::cellStats(out_coa_kud, "max")
+    # saveRDS(raster::cellStats(out_coa_kud, "max"), "./data/movement/space_use/max/coa.rds")
     raster::writeRaster(out_coa_kud, "./data/movement/space_use/coa/out_coa_kud.tif")
   } else out_coa_kud <- raster::raster("./data/movement/space_use/coa/out_coa_kud.tif")
   ## Visualise surface
+
   png("./fig/space_use/out_coa_kud.png",
       height = 5, width = 6, res = 600, units = "in")
-  out_coa_kud_scaled_to_one <- out_coa_kud/raster::cellStats(out_coa_kud, "max")
+  out_coa_kud_scaled <- out_coa_kud/param_scale
   prettyGraphics::pretty_map(
     x = site_bathy,
-    add_rasters = list(x = white_out(out_coa_kud_scaled_to_one),
+    add_rasters = list(x = white_out(out_coa_kud_scaled),
                        zlim = c(0, 1),
                        smallplot = c(0.785, 0.825, 0.27, 0.77),
                        axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
@@ -532,6 +537,7 @@ if(run){
   out_acpf_kud <- raster::mask(out_acpf_kud, site_bathy)
   raster::cellStats(out_acpf_kud, "sum")
   out_acpf_kud <- out_acpf_kud/raster::cellStats(out_acpf_kud, "sum")
+  saveRDS(raster::cellStats(out_acpf_kud, "max"), "./data/movement/space_use/max/acpf.rds")
   raster::writeRaster(out_acpf_kud_agg, "./data/movement/space_use/acpf/out_acpf_kud_agg.tif")
   raster::writeRaster(out_acpf_kud, "./data/movement/space_use/acpf/out_acpf_kud.tif")
 
@@ -554,9 +560,9 @@ if(run){
   out_acdcpf_kud <- raster::mask(out_acdcpf_kud, site_bathy)
   raster::cellStats(out_acdcpf_kud, "sum")
   out_acdcpf_kud <- out_acdcpf_kud/raster::cellStats(out_acdcpf_kud, "sum")
+  saveRDS(raster::cellStats(out_acdcpf_kud, "max"), "./data/movement/space_use/max/acdcpf.rds")
   raster::writeRaster(out_acdcpf_kud_agg, "./data/movement/space_use/acdcpf/out_acdcpf_kud_agg.tif")
   raster::writeRaster(out_acdcpf_kud, "./data/movement/space_use/acdcpf/out_acdcpf_kud.tif")
-
 } else {
   out_acpf_kud   <- raster::raster("./data/movement/space_use/acpf/out_acpf_kud.tif")
   out_acdcpf_kud <- raster::raster("./data/movement/space_use/acdcpf/out_acdcpf_kud.tif")
@@ -632,28 +638,28 @@ dev.off()
 ## ACPF
 png("./fig/space_use/out_acpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
-out_acpf_kud_scaled_to_one <- out_acpf_kud/raster::cellStats(out_acpf_kud, "max")
-prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acpf_kud_scaled_to_one),
+out_acpf_kud_scaled <- out_acpf_kud/param_scale
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acpf_kud_scaled),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
-add_contour(out_acpf_kud_scaled_to_one)
+add_contour(out_acpf_kud)
 add_map_elements()
 dev.off()
 ## ACDCPF
 png("./fig/space_use/out_acdcpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
-out_acdcpf_kud_scaled_to_one <- out_acdcpf_kud/raster::cellStats(out_acdcpf_kud, "max")
-prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acdcpf_kud_scaled_to_one),
+out_acdcpf_kud_scaled <- out_acdcpf_kud/param_scale
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acdcpf_kud_scaled),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 add_map_elements()
-add_contour(out_acdcpf_kud_scaled_to_one)
+add_contour(out_acdcpf_kud)
 dev.off()
 
 
