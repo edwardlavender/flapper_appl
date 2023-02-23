@@ -66,8 +66,10 @@ add_map_elements <- function(){
 ## Raster contours
 add_contour <-
   function(x, p = 0.5, ext = NULL, lwd = 0.5,...){
+    if(!inherits(x, "RasterLayer")) stop("`x` should be a RasterLayer.")
     if(!is.null(ext)) x <- raster::crop(x, ext)
-    x <- spatialEco::raster.vol(x, p = p, sample = FALSE)
+    x <- spatialEco::raster.vol(terra::rast(x), p = p, sample = FALSE)
+    x <- raster::raster(x)
     raster::contour(x, nlevels = 1, drawlabels = FALSE, add = TRUE, lwd = lwd,...)
     return(invisible())
   }
