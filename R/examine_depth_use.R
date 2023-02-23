@@ -79,7 +79,7 @@ if(run_dc_processing){
 out_dc_map[is.na(out_dc_map)] <- 0
 out_dc_map_pc <- (out_dc_map/nrow(archival))
 raster::cellStats(out_dc_map_pc, "sum")
-out_dc_map_pc <- out_dc_map_pc/raster::cellStats(out_dc_map_pc, "max")
+out_dc_map_pc_scaled <- out_dc_map_pc/raster::cellStats(out_dc_map_pc, "max")
 raster::plot(out_dc_map)
 raster::plot(out_dc_map > 0)
 raster::lines(site_coast)
@@ -92,9 +92,10 @@ raster::lines(site_coast)
 #### Plot map
 png("./fig/depth_use/out_dc_map.png",
     height = 5, width = 6, res = 600, units = "in")
-prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_dc_map_pc),
+prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_dc_map_pc_scaled),
                                               smallplot = c(0.785, 0.825, 0.27, 0.77),
-                                              axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
+                                              axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75),
+                                              zlim = c(0, 1)),
                            add_polys = add_coast,
                            pretty_axis_args = paa)
 mtext(side = 4, "POU", cex = 2, line = 1.25)
