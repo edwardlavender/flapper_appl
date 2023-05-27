@@ -182,6 +182,7 @@ if(nrow(out_coa) >= 5L){
 
   png("./fig/space_use/out_coa_kud.png",
       height = 5, width = 6, res = 600, units = "in")
+  add_receivers_full <- list(x = moorings_xy, pch = 21, col = "black", bg = "black", cex = 0.5)
   out_coa_kud_scaled <- out_coa_kud/param_scale
   prettyGraphics::pretty_map(
     x = site_bathy,
@@ -190,7 +191,7 @@ if(nrow(out_coa) >= 5L){
                        smallplot = c(0.785, 0.825, 0.27, 0.77),
                        axis.args = list(tck = -0.1, mgp = c(2.5, 0.2, 0), cex.axis = 1.75)),
     add_polys = add_coast,
-    add_points = list(list(x = moorings_xy, pch = 21, col = "black", bg = "black", cex = 0.5),
+    add_points = list(add_receivers_full,
                       list(x = moorings_xy, cex = moorings_xy$detection_days/4,
                            pch = 21, col = scales::alpha("brown", 0.5)),
                       list(x = out_coa, pch = 4, col = "red", cex = 1.5, lwd = 0.5)
@@ -640,12 +641,15 @@ dev.off()
 png("./fig/space_use/out_acpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
 out_acpf_kud_scaled <- out_acpf_kud/param_scale
-prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acpf_kud_scaled),
+prettyGraphics::pretty_map(site_bathy,
+                           add_rasters = list(x = white_out(out_acpf_kud_scaled),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
-                           pretty_axis_args = paa)
+                           add_points = add_receivers_full,
+                           pretty_axis_args = paa,
+                           crop_spatial = TRUE)
 add_contour(out_acpf_kud)
 add_map_elements()
 dev.off()
@@ -653,12 +657,15 @@ dev.off()
 png("./fig/space_use/out_acdcpf_kud.png",
     height = 5, width = 6, res = 600, units = "in")
 out_acdcpf_kud_scaled <- out_acdcpf_kud/param_scale
-prettyGraphics::pretty_map(add_rasters = list(x = white_out(out_acdcpf_kud_scaled),
+prettyGraphics::pretty_map(site_bathy,
+                           add_rasters = list(x = white_out(out_acdcpf_kud_scaled),
                                               zlim = c(0, 1),
                                               plot_method = raster::plot,
                                               legend = FALSE),
                            add_polys = add_coast,
-                           pretty_axis_args = paa)
+                           add_points = add_receivers_full,
+                           pretty_axis_args = paa,
+                           crop_spatial = TRUE)
 add_map_elements()
 add_contour(out_acdcpf_kud)
 dev.off()
