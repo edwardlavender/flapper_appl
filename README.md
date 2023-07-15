@@ -12,9 +12,11 @@ Modelling, University of St Andrews, Scotland
 <sup>\*</sup> This repository is maintained by Edward Lavender
 (<el72@st-andrews.ac.uk>).
 
-[![Project Status: Active – The project has reached a stable, usable
-state and is being actively
-developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Project Status: Inactive – The project has reached a stable, usable
+state but is no longer being actively developed; support/maintenance
+will be provided as time
+allows.](https://www.repostatus.org/badges/latest/inactive.svg)](https://www.repostatus.org/#inactive)
+[![DOI](https://zenodo.org/badge/395435452.svg)](https://zenodo.org/badge/latestdoi/395435452)
 
 <img src="README_banner_1.png"/>
 
@@ -32,23 +34,22 @@ skate (*Dipturus intermedius*) tagged in the Loch Sunart to the Sound of
 Jura Marine Protected Area (West Scotland) by the Movement Ecology of
 Flapper Skate (MEFS) project in 2016–17. Four analyses are implemented:
 
-  - **A1: Depth use.** The depth-contour (DC) algorithm is used to
-    examine the depth use of a selected individual over a one-month
-    period in the MPA.
-  - **A2: Space use.** The mean-position, acoustic-container particle
-    filtering (ACPF) and acoustic-container depth-contour particle
-    filtering (ACDCPF) algorithms are used to reconstruct patterns of
-    space use for a selected individual over a one-month period in the
-    MPA.
-  - **A3: Post-release paths.** The depth-contour particle filtering
-    (DCPF) algorithm is used to reconstruct fine-scale post-release
-    movement paths of two individuals suggested to exhibit irregular
-    post-release behaviour following catch-and-release angling in the
-    MPA.
-  - **A4: Coocccurrences.** The ACDCPF algorithm is used to reconstruct
-    fine-scale movement paths of two individuals during a period of
-    cooccurring detections to examine evidence for close-knit
-    interactions versus fine-scale spatial partitioning.
+- **A1: Depth use.** The depth-contour (DC) algorithm is used to examine
+  the depth use of a selected individual over a one-month period in the
+  MPA.
+- **A2: Space use.** The mean-position, acoustic-container particle
+  filtering (ACPF) and acoustic-container depth-contour particle
+  filtering (ACDCPF) algorithms are used to reconstruct patterns of
+  space use for a selected individual over a one-month period in the
+  MPA.
+- **A3: Post-release paths.** The depth-contour particle filtering
+  (DCPF) algorithm is used to reconstruct fine-scale post-release
+  movement paths of two individuals suggested to exhibit irregular
+  post-release behaviour following catch-and-release angling in the MPA.
+- **A4: Coocccurrences.** The ACDCPF algorithm is used to reconstruct
+  fine-scale movement paths of two individuals during a period of
+  cooccurring detections to examine evidence for close-knit interactions
+  versus fine-scale spatial partitioning.
 
 <img src="README_banner_2.png"/>
 
@@ -78,75 +79,73 @@ used on a few occasions.
 ## Structure
 
 1.  `data-raw/` contains raw data for the project.
-    
-      - `movement/` contains raw movement data from the MEFS project:
-          - `skateids.rds` is a dataframe that records tagged
-            individuals and their characteristics;
-          - `moorings.rds` is a dataframe that records acoustic receiver
-            deployments;
-          - `acoustics.rds` is a dataframe that records acoustic
-            detections;  
-          - `archival.rds` is a dataframe that records depth
-            observations;
-          - `dat_iprb.rds` is a dataframe that records depth
-            observations around catch-and-release angling events;
-      - `spatial/` contains spatial data for the study area:
-          - `bathy/` contains a 5 x 5 m bathymetry raster (named
-            `bathy_res_full_ext_full_abs.tif`), sourced from Howe et
-            al. (2014);
-          - `coastline/` contains a 1:10,000 coastline layer (named
-            `westminster_const_region.shp`) from
-            [Digimap](https://digimap.edina.ac.uk);
-          - `sediments/` contains a map of sediment types (named
-            `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et
-            al. (2014) and Boswarva et al. (2018);
-      - `process_data_raw.R` processes raw data as required for each
-        analysis.
+
+    - `movement/` contains raw movement data from the MEFS project:
+      - `skateids.rds` is a dataframe that records tagged individuals
+        and their characteristics;
+      - `moorings.rds` is a dataframe that records acoustic receiver
+        deployments;
+      - `acoustics.rds` is a dataframe that records acoustic
+        detections;  
+      - `archival.rds` is a dataframe that records depth observations;
+      - `dat_iprb.rds` is a dataframe that records depth observations
+        around catch-and-release angling events;
+    - `spatial/` contains spatial data for the study area:
+      - `bathy/` contains a 5 x 5 m bathymetry raster (named
+        `bathy_res_full_ext_full_abs.tif`), sourced from Howe et
+        al. (2014);
+      - `coastline/` contains a 1:10,000 coastline layer (named
+        `westminster_const_region.shp`) from
+        [Digimap](https://digimap.edina.ac.uk);
+      - `sediments/` contains a map of sediment types (named
+        `HI1354_Sediment_Map_v2_WGS84.shp`), sourced from Howe et
+        al. (2014) and Boswarva et al. (2018);
+    - `process_data_raw.R` processes raw data as required for each
+      analysis.
 
 2.  `data/` contains data for the project.
-    
-      - `movement/`contains processed movement time series (from
-        `process_data_raw.R`) and analysis-specific algorithm outputs;
-      - `skate/` contains skate datasets, copied from `movement/` for
-        publication in this repository:
-          - `A1-2` contains skate datasets required for A1 and A2:
-              - `moorings.rds` contains passive acoustic telemetry
-                deployment information (copied from
-                `movement/generic/`);
-              - `moorings_xy.rds` contains receiver deployment locations
-                (copied from `spatial/`);
-              - `acoustics_eg.rds` is the example acoustic time series
-                (copied from `movement/tag/`);
-              - `archival_eg.rds` is the example archival time series
-                (copied from `movement/tag/`);
-          - `A3` contains skate datasets required for A3 (copied from
-            `movement/post_release_paths/`):
-              - `1507/` contains the data for individual 1507, including
-                the release location (`xy_release.rds`) and the
-                post-release time series (`archival_pr.rds`);
-              - `1558/` contains the same datasets for individual 1558;
-          - `A4` contains skate datasets required for A4 (copied from
-            `movement/cooccurrences/`):
-              - `acc_1.rds` and `arc_2.rds` contain the acoustic time
-                series for individuals 542 and 560 respectively;
-              - `arc_1.rds` and `arc_2.rds` contain the archival time
-                series for the same individuals;
-      - `spatial/` contains processed spatial data (from
-        `process_data_raw.R`);
-      - `tmp/` stores temporary files;
+
+    - `movement/`contains processed movement time series (from
+      `process_data_raw.R`) and analysis-specific algorithm outputs;
+    - `skate/` contains skate datasets, copied from `movement/` for
+      publication in this repository:
+      - `A1-2` contains skate datasets required for A1 and A2:
+        - `moorings.rds` contains passive acoustic telemetry deployment
+          information (copied from `movement/generic/`);
+        - `moorings_xy.rds` contains receiver deployment locations
+          (copied from `spatial/`);
+        - `acoustics_eg.rds` is the example acoustic time series (copied
+          from `movement/tag/`);
+        - `archival_eg.rds` is the example archival time series (copied
+          from `movement/tag/`);
+      - `A3` contains skate datasets required for A3 (copied from
+        `movement/post_release_paths/`):
+        - `1507/` contains the data for individual 1507, including the
+          release location (`xy_release.rds`) and the post-release time
+          series (`archival_pr.rds`);
+        - `1558/` contains the same datasets for individual 1558;
+      - `A4` contains skate datasets required for A4 (copied from
+        `movement/cooccurrences/`):
+        - `acc_1.rds` and `arc_2.rds` contain the acoustic time series
+          for individuals 542 and 560 respectively;
+        - `arc_1.rds` and `arc_2.rds` contain the archival time series
+          for the same individuals;
+    - `spatial/` contains processed spatial data (from
+      `process_data_raw.R`);
+    - `tmp/` stores temporary files;
 
 3.  `R/` contains `R` scripts that implement analyses.
-    
-      - `define_global_param.R` defines global parameters, such as
-        projections, detection and movement parameters;
-      - `define_study_area_fields.R` defines spatial fields for mapping
-        the study area;
-      - `examine_depth_use.R` implements A1;
-      - `examine_space_use.R` implements A2, supported by
-        `examine_space_use_time_trials.R`, `examine_lcps.R` and
-        `examine_habitat_preferences.R`;
-      - `examine_post_release_paths.R` implements A3;
-      - `examine_coocccurrences.R` implements A4;
+
+    - `define_global_param.R` defines global parameters, such as
+      projections, detection and movement parameters;
+    - `define_study_area_fields.R` defines spatial fields for mapping
+      the study area;
+    - `examine_depth_use.R` implements A1;
+    - `examine_space_use.R` implements A2, supported by
+      `examine_space_use_time_trials.R`, `examine_lcps.R` and
+      `examine_habitat_preferences.R`;
+    - `examine_post_release_paths.R` implements A3;
+    - `examine_coocccurrences.R` implements A4;
 
 4.  `fig/` contains figures.
 
@@ -213,5 +212,5 @@ Royal Society of Edinburgh, 105(4), 273–284.
 
 ## Citation
 
-Lavender et al. (in prep). A semi-stochastic modelling framework for
-passive acoustic telemetry.
+Lavender et al. (in press). A semi-stochastic modelling framework for
+passive acoustic telemetry. Methods in Ecology and Evolution.
